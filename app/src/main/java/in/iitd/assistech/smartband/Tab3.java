@@ -18,6 +18,7 @@ import android.widget.*;
 
 //import com.bumptech.glide.Glide;
 import com.bumptech.glide.Glide;
+import com.facebook.login.LoginManager;
 import com.google.android.gms.auth.api.Auth;
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions;
 import com.google.android.gms.common.ConnectionResult;
@@ -26,10 +27,16 @@ import com.google.android.gms.common.api.ResultCallback;
 import com.google.android.gms.common.api.Status;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.auth.UserInfo;
 
 import de.hdodenhof.circleimageview.CircleImageView;
 
 import static com.facebook.FacebookSdk.getApplicationContext;
+import static in.iitd.assistech.smartband.MainActivity.EMAIL;
+import static in.iitd.assistech.smartband.MainActivity.NAME;
+import static in.iitd.assistech.smartband.MainActivity.PHOTO;
+import static in.iitd.assistech.smartband.MainActivity.PHOTOURI;
+import static in.iitd.assistech.smartband.MainActivity.SIGNED;
 
 public class Tab3 extends Fragment implements View.OnClickListener, GoogleApiClient.OnConnectionFailedListener{
 
@@ -55,7 +62,6 @@ public class Tab3 extends Fragment implements View.OnClickListener, GoogleApiCli
     private String uid;
     private String name;
     private String email;
-    private Uri photoUrl;
 
 
     @Override
@@ -92,20 +98,26 @@ public class Tab3 extends Fragment implements View.OnClickListener, GoogleApiCli
 
         userProfileImage = (CircleImageView)view.findViewById(R.id.mUserProfilePic);
 
-        GoogleSignInOptions gso = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-                .requestIdToken(getString(R.string.default_web_client_id))
-                .build();
-        // [END config_signin]
-        if(mGoogleApiClient == null){
-            mGoogleApiClient = new GoogleApiClient.Builder(getContext())
-                    .enableAutoManage(getActivity() /* FragmentActivity */, this /* OnConnectionFailedListener */)
-                    .addApi(Auth.GOOGLE_SIGN_IN_API, gso)
-                    .build();
-        }
-
         mAuth = FirebaseAuth.getInstance();
         user = mAuth.getCurrentUser();
-        providerId = user.getProviderId();
+
+        Log.e(TAG, "Provider ID : " + providerId);
+        for (UserInfo user: FirebaseAuth.getInstance().getCurrentUser().getProviderData()) {
+            Log.e(TAG, user.getProviderId());
+            if (user.getProviderId().equals("facebook.com")) {
+                System.out.println("User is signed in with Facebook");
+            } else {
+                if(mGoogleApiClient == null){
+                    GoogleSignInOptions gso = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+                            .requestIdToken(getString(R.string.default_web_client_id))
+                            .build();
+                    mGoogleApiClient = new GoogleApiClient.Builder(getContext())
+                            .enableAutoManage(getActivity() /* FragmentActivity */, this /* OnConnectionFailedListener */)
+                            .addApi(Auth.GOOGLE_SIGN_IN_API, gso)
+                            .build();
+                }
+            }
+        }
 
         view.findViewById(R.id.signOutButton).setOnClickListener(this);
         view.findViewById(R.id.revokeButton).setOnClickListener(this);
@@ -177,48 +189,67 @@ public class Tab3 extends Fragment implements View.OnClickListener, GoogleApiCli
         mGoogleApiClient.disconnect();
     }
 
-    //TODO: Call this method from Tab3
     private void signOut() {
         // Firebase sign out
         mAuth.signOut();
 
         // Google sign out
-        Auth.GoogleSignInApi.signOut(mGoogleApiClient).setResultCallback(
-                new ResultCallback<Status>() {
-                    @Override
-                    public void onResult(@NonNull Status status) {
-                        //TODO: updateUI(null);
-                        Log.e(TAG, "Google SignOut1" + status.toString());
-                        if(mAuth.getCurrentUser() == null){
-                            Log.e(TAG, "Google SignOut258");
-                            Intent intent = new Intent(getActivity(), LoginActivity.class);
-                            startActivity(intent);
-                            getActivity().finish();
+        if(SIGNED.equals("GOOGLE")){
+            Auth.GoogleSignInApi.signOut(mGoogleApiClient).setResultCallback(
+                    new ResultCallback<Status>() {
+                        @Override
+                        public void onResult(@NonNull Status status) {
+                            //TODO: updateUI(null);
+                            Log.e(TAG, "Google SignOut1" + status.toString());
                         }
-                    }
-                });
-        Log.e(TAG, "Google SignOut");
+                    });
+            Log.e(TAG, "Google SignOut");
+        } else if (SIGNED.equals("FB")){
+            LoginManager.getInstance().logOut();
+        }
+
+        if(mAuth.getCurrentUser() == null){
+            Log.e(TAG, "Google SignOut258");
+            Intent intent = new Intent(getActivity(), SignInActivity.class);
+            startActivity(intent);
+            getActivity().finish();
+        }
     }
 
     private void revokeAccess() {
         // Firebase sign out
         mAuth.signOut();
 
-        // Google revoke access
-        Auth.GoogleSignInApi.revokeAccess(mGoogleApiClient).setResultCallback(
-                new ResultCallback<Status>() {
-                    @Override
-                    public void onResult(@NonNull Status status) {
-                        //TODO: updateUI(null);
-                    }
-                });
+        if(SIGNED.equals("GOOGLE")){
+            // Google revoke access
+            Auth.GoogleSignInApi.revokeAccess(mGoogleApiClient).setResultCallback(
+                    new ResultCallback<Status>() {
+                        @Override
+                        public void onResult(@NonNull Status status) {
+                            //TODO: updateUI(null);
+                        }
+                    });
+            Log.e(TAG, "Google SignOut");
+        } else if (SIGNED.equals("FB")){
+            LoginManager.getInstance().logOut();
+        }
+
+        if(mAuth.getCurrentUser() == null){
+            Log.e(TAG, "Google SignOut259");
+            Intent intent = new Intent(getActivity(), SignInActivity.class);
+            startActivity(intent);
+            getActivity().finish();
+        }
     }
 
     private void updateUI(){
-        name = user.getDisplayName();
-        email = user.getEmail();
-        photoUrl = user.getPhotoUrl();
-        String mUserprofileUrl = photoUrl.toString();
+//        name = user.getDisplayName();
+//        email = user.getEmail();
+//        photoUrl = user.getPhotoUrl();
+//        String mUserprofileUrl = photoUrl.toString();
+        name = NAME;
+        email = EMAIL;
+        String mUserprofileUrl = PHOTOURI;
 
         userName.setText(name);
         userEmail.setText(email);
@@ -232,7 +263,7 @@ public class Tab3 extends Fragment implements View.OnClickListener, GoogleApiCli
         }
 
         Log.d(TAG, name + email);
-        Log.d(TAG, photoUrl.toString());
+        Log.e(TAG, "Photo : " + mUserprofileUrl);
     }
 
     @Override

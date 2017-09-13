@@ -44,6 +44,11 @@ public class MainActivity extends AppCompatActivity implements TabLayout.OnTabSe
        OnTabEvent{
 
     private static final String TAG = "MainActivity";
+    public static String NAME;
+    public static String EMAIL;
+    public static String PHOTO;
+    public static String PHOTOURI;
+    public static String SIGNED;
 
     private TabLayout tabLayout;
     private ViewPager viewPager;
@@ -167,6 +172,12 @@ public class MainActivity extends AppCompatActivity implements TabLayout.OnTabSe
         super.onCreate(savedInstanceState);
         this.requestWindowFeature(Window.FEATURE_NO_TITLE);
         setContentView(R.layout.activity_main);
+
+        NAME = getIntent().getStringExtra("NAME");
+        EMAIL = getIntent().getStringExtra("EMAIL");
+        PHOTO = getIntent().getStringExtra("PHOTO");
+        PHOTOURI = getIntent().getStringExtra("PHOTOURI");
+        SIGNED = getIntent().getStringExtra("SIGNED");
 
         //TODO: Hardware Acceleration
 //        getWindow().setFlags(

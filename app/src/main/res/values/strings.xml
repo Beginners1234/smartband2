@@ -30,5 +30,6 @@
         completions."
     </string>
     <string name="title_activity_notification">NotificationActivity</string>
+    <string name="title_activity_sign_in">SignInActivity</string>
 
 </resources>
