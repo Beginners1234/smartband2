@@ -2,6 +2,7 @@ package in.iitd.assistech.smartband;
 
 import android.app.NotificationManager;
 import android.content.Context;
+import android.graphics.Point;
 import android.location.Location;
 import android.os.Bundle;
 import android.os.Environment;
@@ -12,6 +13,7 @@ import android.support.v4.app.Fragment;
 import android.support.v4.app.NotificationCompat;
 import android.text.format.Time;
 import android.util.Log;
+import android.view.Display;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -77,9 +79,20 @@ public class Tab2 extends Fragment implements View.OnClickListener{
         micReadButton = (Button)view.findViewById(R.id.micReadButton);
         stopRecordButton = (Button)view.findViewById(R.id.stopRecordButton);
 
+        Display display = getActivity().getWindowManager().getDefaultDisplay();
+        Point screenSize = new Point();
+        display.getRealSize(screenSize);
+        int size = Math.min(screenSize.x, screenSize.y);
+        int buttonSize = Math.round(size * 0.75f);
+
         startButton = (ImageButton)view.findViewById(R.id.start_button);
         stopButton = (ImageButton)view.findViewById(R.id.stop_button);
         historyListView = (ListView)view.findViewById(R.id.historyListView);
+
+        startButton.setMaxWidth(buttonSize);
+        startButton.setMaxHeight(buttonSize);
+        stopButton.setMaxWidth(buttonSize);
+        stopButton.setMaxHeight(buttonSize);
 
         micReadButton.setOnClickListener(this);
         startButton.setOnClickListener(this);

@@ -13,4 +13,8 @@
     <color name="secondary_text">#757575</color>
     <color name="icons">#212121</color>
     <color name="divider">#BDBDBD</color>
+    <color name="sb_silver">#e0e1e6</color>
+    <color name="sb_black">#333743</color>
+    <color name="sb_orange">#f6821f</color>
+    <color name="sb_grey">#58595b</color>
 </resources>
