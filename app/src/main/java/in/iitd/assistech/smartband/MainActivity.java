@@ -107,6 +107,7 @@ public class MainActivity extends AppCompatActivity implements TabLayout.OnTabSe
     @Override
     protected void onSaveInstanceState(Bundle outState) {
         super.onSaveInstanceState(outState);
+
     }
 
     @Override
@@ -260,7 +261,7 @@ public class MainActivity extends AppCompatActivity implements TabLayout.OnTabSe
     private void prepNN() {
         try{
             AssetManager am = getAssets();
-            InputStream is = am.open("NN_Weights.xls");
+            InputStream is = am.open("weights_v1.1.xls");
             final Workbook wb = Workbook.getWorkbook(is);
 
             Sheet inputWeightSheet = wb.getSheet("InputWeight");
@@ -432,9 +433,9 @@ public class MainActivity extends AppCompatActivity implements TabLayout.OnTabSe
     static void setProbOut(double[] outProb){
 //        adapter.editTab2Text(outProb[0], outProb[1], outProb[2]);
         double hornProb = (outProb[0]);
-        double dogBarkProb = (outProb[1]);
+        double ambientProb = (outProb[1]);
 //        double gunShotProb = (outProb[2]);
-        double ambientProb = (outProb[2]);
+        double dogBarkProb = (outProb[2]);
 
         final Message msg = new Message();
         final Bundle bundle = new Bundle();

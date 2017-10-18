@@ -55,7 +55,6 @@ public class Tab1 extends Fragment implements View.OnClickListener {
         speakButton = (ImageButton) view.findViewById(R.id.speakButton);
         speakButton.setOnClickListener(this);
 
-
         // Check to see if a recognition activity is present
 // if running on AVD virtual device it will give this message. The mic
 // required only works on an actual android device
@@ -135,10 +134,10 @@ public class Tab1 extends Fragment implements View.OnClickListener {
             }
         });
 
-        TextView meLabel = (TextView) view.findViewById(R.id.meLbl);
-        TextView companionLabel = (TextView) view.findViewById(R.id.friendLabel);
-        RelativeLayout container = (RelativeLayout) view.findViewById(R.id.container);
-        companionLabel.setText("My Buddy");// Hard Coded
+//        TextView meLabel = (TextView) view.findViewById(R.id.meLbl);
+//        TextView companionLabel = (TextView) view.findViewById(R.id.friendLabel);
+//        RelativeLayout container = (RelativeLayout) view.findViewById(R.id.container);
+//        companionLabel.setText("My Buddy");// Hard Coded
 
         sendBtn.setOnClickListener(this);
     }
@@ -162,7 +161,7 @@ public class Tab1 extends Fragment implements View.OnClickListener {
             ChatMessage chatMessage = new ChatMessage();
             chatMessage.setId(122);//dummy
             chatMessage.setMessage(voiceText);
-            chatMessage.setDate(DateFormat.getDateTimeInstance().format(new Date()));
+//            chatMessage.setDate(DateFormat.getDateTimeInstance().format(new Date()));
             chatMessage.setMe(false);
 
             displayMessage(chatMessage);

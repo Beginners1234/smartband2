@@ -14,23 +14,43 @@
         app:layout_constraintRight_toLeftOf="parent"
         app:layout_constraintTop_toBottomOf="parent"
         app:layout_constraintBottom_toTopOf="parent">
+
         <ImageButton
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+            android:layout_width="200dp"
+            android:layout_height="200dp"
             android:id="@+id/start_button"
             android:src="@drawable/start_button_small"
             android:layout_centerInParent="true"
             android:scaleType="centerCrop"
-            android:adjustViewBounds="true"/>
+            android:background="@null"
+            android:adjustViewBounds="false"/>
+
+        <!--<de.hdodenhof.circleimageview.CircleImageView-->
+            <!--android:layout_width="300dp"-->
+            <!--android:layout_height="300dp"-->
+            <!--android:id="@+id/start_button"-->
+            <!--android:src="@drawable/start_button_small"-->
+            <!--android:background="@null"-->
+            <!--android:layout_centerInParent="true"/>-->
 
         <ImageButton
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+            android:layout_width="200dp"
+            android:layout_height="200dp"
             android:id="@+id/stop_button"
             android:src="@drawable/stop_button_small"
             android:visibility="gone"
             android:scaleType="centerCrop"
+            android:background="@null"
             android:adjustViewBounds="true"/>
+
+        <!--<de.hdodenhof.circleimageview.CircleImageView-->
+            <!--android:layout_width="300dp"-->
+            <!--android:layout_height="300dp"-->
+            <!--android:id="@+id/stop_button"-->
+            <!--android:src="@drawable/stop_button_small"-->
+            <!--android:background="@null"-->
+            <!--android:layout_centerInParent="true"/>-->
+
     </RelativeLayout>
 
     <RelativeLayout

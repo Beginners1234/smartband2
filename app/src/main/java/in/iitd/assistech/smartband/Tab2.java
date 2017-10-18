@@ -6,12 +6,10 @@ import android.graphics.Point;
 import android.location.Location;
 import android.os.Bundle;
 import android.os.Environment;
-import android.os.SystemClock;
 import android.os.Vibrator;
 import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.NotificationCompat;
-import android.text.format.Time;
 import android.util.Log;
 import android.view.Display;
 import android.view.LayoutInflater;
@@ -34,6 +32,8 @@ import java.util.Date;
 import java.util.GregorianCalendar;
 import java.util.List;
 import java.util.SimpleTimeZone;
+
+import de.hdodenhof.circleimageview.CircleImageView;
 
 import static android.content.Context.NOTIFICATION_SERVICE;
 import static android.os.ParcelFileDescriptor.MODE_APPEND;
@@ -85,8 +85,8 @@ public class Tab2 extends Fragment implements View.OnClickListener{
         int size = Math.min(screenSize.x, screenSize.y);
         int buttonSize = Math.round(size * 0.75f);
 
-        startButton = (ImageButton)view.findViewById(R.id.start_button);
-        stopButton = (ImageButton)view.findViewById(R.id.stop_button);
+        startButton = (ImageButton) view.findViewById(R.id.start_button);
+        stopButton = (ImageButton) view.findViewById(R.id.stop_button);
         historyListView = (ListView)view.findViewById(R.id.historyListView);
 
         startButton.setMaxWidth(buttonSize);

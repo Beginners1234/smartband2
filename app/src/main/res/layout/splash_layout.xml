@@ -8,6 +8,7 @@ android:layout_height="match_parent">
         android:layout_height="200dp"
         android:src="@drawable/splash_image"
         android:layout_gravity="center"
+        android:background="@null"
         android:layout_centerHorizontal="true"
         android:layout_centerVertical="true"/>
 
@@ -24,7 +25,7 @@ android:layout_height="match_parent">
         android:id="@+id/text2"
         android:layout_below="@+id/text1"
         android:layout_centerHorizontal="true"
-        android:text="of the Impulsive SOunds"/>
+        android:text="of the Impulsive Sounds"/>
 
 
 </RelativeLayout>

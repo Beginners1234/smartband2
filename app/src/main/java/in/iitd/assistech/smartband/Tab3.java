@@ -29,6 +29,8 @@ import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.auth.UserInfo;
 
+import java.util.Arrays;
+
 import de.hdodenhof.circleimageview.CircleImageView;
 
 import static com.facebook.FacebookSdk.getApplicationContext;
@@ -49,7 +51,7 @@ public class Tab3 extends Fragment implements View.OnClickListener, GoogleApiCli
     private ExpandableListView notifListView;
     private ExpandableListView soundListView;
     static final String[] notificationListItems = {"Vibration", "Sound", "Flashlight", "Flash Screen"};
-    static final String[] soundListItems = {"Vehicle Horn", "Dog Bark", "GunShot"};
+    static final String[] soundListItems = {"Vehicle Horn", "Dog Bark"};
 
     private CircleImageView userProfileImage;
     private TextView userName;
@@ -67,24 +69,35 @@ public class Tab3 extends Fragment implements View.OnClickListener, GoogleApiCli
     @Override
     public void onSaveInstanceState(Bundle outState) {
         super.onSaveInstanceState(outState);
-        boolean[] notifSwitchState = new boolean[notificationListItems.length];
-        boolean[] soundSwitchState = new boolean[soundListItems.length];
+
+        int state = notificationListItems.length+soundListItems.length;
+        boolean[] notifSwitchState = new boolean[state];
+//        boolean[] soundSwitchState = new boolean[soundListItems.length];
 
         Log.e(TAG, "FUCK YOU!!!!!!!!!!!!!!!!!!!!!!");
         for (int i=0; i<notificationListItems.length; i++){
             notifSwitchState[i] = notifListAdapter.getCheckedState(i);
         }
-        for (int i=0; i<soundListItems.length; i++){
-            soundSwitchState[i] = soundListAdapter.getCheckedState(i);
+        for (int i=notificationListItems.length; i<state; i++){
+            notifSwitchState[i] = soundListAdapter.getCheckedState(i-notificationListItems.length);
+//            soundSwitchState[i] = soundListAdapter.getCheckedState(i);
         }
 
+//        Log.e(TAG, "SoundStare 0 and 1 " + soundSwitchState[0] + ", " + soundSwitchState[1]);
+
         outState.putBooleanArray("notifState", notifSwitchState);
-        outState.putBooleanArray("soundState", soundSwitchState);
+//        outState.putBooleanArray("soundState", soundSwitchState);
     }
 
+//    @Override
+//    public void onCreate(@Nullable Bundle savedInstanceState) {
+//        super.onCreate(savedInstanceState);
+//    }
+
+
     @Override
-    public void onCreate(@Nullable Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
+    public void onViewStateRestored(@Nullable Bundle savedInstanceState) {
+        super.onViewStateRestored(savedInstanceState);
     }
 
     @Override
@@ -130,9 +143,13 @@ public class Tab3 extends Fragment implements View.OnClickListener, GoogleApiCli
         notifListView = (ExpandableListView) view.findViewById(R.id.notificationListView);
         soundListView = (ExpandableListView) view.findViewById(R.id.soundListView);
         if(savedInstanceState != null){
-            boolean[] notifSwitchState = savedInstanceState.getBooleanArray("notifState");
-            boolean[] soundSwitchState = savedInstanceState.getBooleanArray("soundState");
-//            Log.e(TAG, notifSwitchState.toString());
+            boolean[] switchState = savedInstanceState.getBooleanArray("notifState");
+            boolean[] notifSwitchState = Arrays.copyOf(switchState, notificationListItems.length);
+            boolean[] soundSwitchState = new boolean[soundListItems.length];
+            for (int i=0; i<soundListItems.length; i++){
+                soundSwitchState[i] = switchState[notificationListItems.length+i];
+            }
+//            boolean[] soundSwitchState = savedInstanceState.getBooleanArray("soundState");
             try{
 //                notifListAdapter = new NotifListAdapter(getContext(), notificationListItems, notifSwitchState);
                 notifListAdapter = new ExpandableListAdapter(getContext(), notificationListItems, "Notification", notifSwitchState);
@@ -160,8 +177,8 @@ public class Tab3 extends Fragment implements View.OnClickListener, GoogleApiCli
 
             @Override
             public void onGroupExpand(int groupPosition) {
-                Toast.makeText(getApplicationContext(), " Expanded",
-                        Toast.LENGTH_SHORT).show();
+//                Toast.makeText(getApplicationContext(), " Expanded",
+//                        Toast.LENGTH_SHORT).show();
             }
         });
         /**-------------------------------**/
