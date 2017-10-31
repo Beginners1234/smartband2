@@ -171,11 +171,14 @@ public class Tab2 extends Fragment implements View.OnClickListener{
 //            v.vibrate(500);
 //        }
 
-        double[] output = {hornProb, barkProb, gunShotProb, ambientProb};
-        String[] textOut = {"Horn Detected", "DogBark Detected", "GunShot Detected", "Ambience"};
+        double[] output = new double[3];
+        output[0] = hornProb;
+        output[1] = barkProb;
+        output[2] = ambientProb;
+        String[] textOut = {"Horn Detected", "DogBark Detected", "Ambience"};
         String[] textDes = {"There might be a car around!",
                         "Beware of DOGS!!!",
-                        "Firearms, CALL THE POLICE!!!", "Ambience"};
+                        "Ambience"};
         String filename = "notif_log_smartband.csv";
         for (int i=0; i<(output.length-1); i++){
             if(output[i]>0.85){
@@ -205,10 +208,10 @@ public class Tab2 extends Fragment implements View.OnClickListener{
                 }
             }
         }
-        hornValue.setText(String.format("%.2g%n", hornProb));
-        barkValue.setText(String.format("%.2g%n", barkProb));
+        hornValue.setText(String.format("%.2g%n", output[0]));
+        barkValue.setText(String.format("%.2g%n", output[1]));
         gunShotValue.setText(String.format("%.2g%n", gunShotProb));
-        ambientValue.setText(String.format("%.2g%n", ambientProb));
+        ambientValue.setText(String.format("%.2g%n", output[2]));
     }
 
     public void writeToExcel(String filename, double[] output, String detail){

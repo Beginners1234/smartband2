@@ -79,8 +79,6 @@ public class Vec2Frame {
 
             timings.addSplit("Calculate indf");
 
-            //TODO: Remove this
-            System.out.println("Vec2Frame line 71 - ");
             for (int i=0; i<NW; i++){
                 for (int j=0; j<M; j++){
                     int temp = inds[i]+indf[j];

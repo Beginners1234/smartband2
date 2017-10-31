@@ -95,7 +95,7 @@ public class MainActivity extends AppCompatActivity implements TabLayout.OnTabSe
             if(msg.getData().getInt("what") == PROB_MSG_HNDL){
                 //TODO create an instance of Tab2 fragment and call editValue()
                 double hornProb = msg.getData().getDouble("hornProb");
-                double barkProb = msg.getData().getDouble("dogBarkProb");
+                double barkProb = 0.0;//msg.getData().getDouble("dogBarkProb");
                 double gunShotProb = 0.0;//msg.getData().getDouble("gunShotProb");
                 double ambientProb = msg.getData().getDouble("ambientProb");
                 boolean[] notifState = adapter.getInitialNotifListState();
@@ -261,7 +261,7 @@ public class MainActivity extends AppCompatActivity implements TabLayout.OnTabSe
     private void prepNN() {
         try{
             AssetManager am = getAssets();
-            InputStream is = am.open("weights_v1.1.xls");
+            InputStream is = am.open("weights_v1.3.xls");
             final Workbook wb = Workbook.getWorkbook(is);
 
             Sheet inputWeightSheet = wb.getSheet("InputWeight");
@@ -433,15 +433,15 @@ public class MainActivity extends AppCompatActivity implements TabLayout.OnTabSe
     static void setProbOut(double[] outProb){
 //        adapter.editTab2Text(outProb[0], outProb[1], outProb[2]);
         double hornProb = (outProb[0]);
-        double ambientProb = (outProb[1]);
 //        double gunShotProb = (outProb[2]);
-        double dogBarkProb = (outProb[2]);
+//        double dogBarkProb = (outProb[1]);
+        double ambientProb = (outProb[1]);
 
         final Message msg = new Message();
         final Bundle bundle = new Bundle();
         bundle.putInt("what", PROB_MSG_HNDL);
         bundle.putDouble("hornProb", hornProb);
-        bundle.putDouble("dogBarkProb", dogBarkProb);
+//        bundle.putDouble("dogBarkProb", dogBarkProb);
 //        bundle.putDouble("gunShotProb", gunShotProb);
         bundle.putDouble("ambientProb", ambientProb);
         msg.setData(bundle);

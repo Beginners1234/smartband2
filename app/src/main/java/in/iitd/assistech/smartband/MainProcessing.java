@@ -134,25 +134,37 @@ public class MainProcessing {
             outputNodes[i] = sum + outputBias[i][0];
         }
 
-        double sum = 0.0;
-        for (int i = 0; i < outputNodes.length; i++) {
-            sum += Math.exp(outputNodes[i]);
-        }
+//        double sum = 0.0;
+//        for (int i = 0; i < outputNodes.length; i++) {
+//            outputNodes[i] = Math.exp(outputNodes[i]);
+//        }
 
-        for (int i = 0; i < outputNodes.length; i++) {
-            outputNodes[i] = softmax(outputNodes[i], sum);
-        }
+        double[] outProb = softmax(outputNodes);
         Log.e(TAG, Integer.toString(outputNodes.length));
-        return outputNodes;
+        return outProb;
     }
 
     private double tansig(double x) {
         return ((2.0 / (1 + Math.exp(-2*x))) - 1.0);
     }
 
-    private double softmax(double outputNode, double sum) {
-        double temp = Math.exp(outputNode);
-        return (temp/sum);
+    private double[] softmax(double[] outputNode) {
+        double[] prob = new double[outputNode.length];
+
+        for (int i = 0; i < outputNode.length; i++) {
+            outputNode[i] = Math.exp(outputNode[i]);
+        }
+
+        double sum = 0.0;
+        for (int i = 0; i < outputNode.length; i++) {
+            sum += outputNode[i];
+        }
+
+        for (int i = 0; i < outputNode.length; i++) {
+            prob[i] = outputNode[i]/sum;
+        }
+
+        return prob;
     }
 
     public void writeToExcel(String filename, int frames, int frameLength, int frameShift, int numMFCC, int filterbankChannel, int inputNode, long timeTaken){
