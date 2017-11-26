@@ -17,7 +17,7 @@ public class MFCCMatlab {
     private static final String TAG = "MFCCMatlab";
 
     private static double[] speech; //Input speech signal as vector
-    private static short[] speechShort; //short[] input signal, no need to multiply with 2^15
+    private static double[] speechShort; //short[] input signal, no need to multiply with 2^15
 
     private static int NW; //frame duration (samples)
     private static int NS; //frame shift (samples)
@@ -35,7 +35,7 @@ public class MFCCMatlab {
     private int featSoundLength;
 
 
-    public MFCCMatlab(short[] speech){
+    public MFCCMatlab(double[] speech){
 //            (short[] speech, int FS, int TW, int TS, double alpha,
 //                      int[] range, int M, int N, int L){
         this.speechShort = speech;
@@ -264,7 +264,7 @@ public class MFCCMatlab {
         return DCT;
     }
 
-    public static double[] filter(double[] b, double a, short[] x) {
+    public static double[] filter(double[] b, double a, double[] x) {
         double[] filter = new double[x.length];
         filter[0] = 0.0;
         for (int i=1; i<x.length; i++){

@@ -45,10 +45,13 @@ public class MainProcessing {
     public static int L = 22; //liftering coefficient
     public static final int PROCESS_LENGTH = (int)Math.floor((TW+(frames-1)*TS + 10)*RECORDER_SAMPLERATE/1000);//RECORDER_SAMPLERATE*RECORD_TIME_DURATION/3000;
 
-    short[] sDataPart1 = new short[PROCESS_LENGTH];
+//    short[] sDataPart1 = new short[PROCESS_LENGTH];
+    double[] sDataPart1 = new double[PROCESS_LENGTH];
     short[] sDataPart2 = new short[PROCESS_LENGTH];
     short[] sDataPart3 = new short[PROCESS_LENGTH];
     short[] sDataPart4 = new short[PROCESS_LENGTH];
+
+//    public static double[] sData_double = new double[PROCESS_LENGTH];
 
     private MFCCMatlab mfcc; // instance of class MFCCMatlab
 
@@ -66,7 +69,10 @@ public class MainProcessing {
 
     public MainProcessing(Context c){
         this.context = c;
-        this.sDataPart1 = Arrays.copyOfRange(sData, 0, PROCESS_LENGTH);
+        for (int i=0; i<PROCESS_LENGTH; i++){
+            sDataPart1[i] = (double)sData[i]*1.0/Math.pow(2.0, 15.0);
+        }
+//        this.sDataPart1 = Arrays.copyOfRange(sData, 0, PROCESS_LENGTH);
     }
 
     public void processAudioEvent() {
