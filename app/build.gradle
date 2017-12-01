@@ -43,15 +43,9 @@ dependencies {
         exclude group: 'com.android.support', module: 'support-annotations'
     })
     //TODO: Changed the error to warning level
-
-
     compile files('libs/jxl.jar')
     //    compile 'com.google.android.gms:play-services-analytics:11.0.1'
-
     //    compile 'com.firebaseui:firebase-ui-storage:0.6.0'
-    
-
-
     compile 'com.android.support:appcompat-v7:25.3.1'
     compile 'com.android.support:design:25.3.1'
     compile 'com.google.android.gms:play-services-auth:11.0.1'
@@ -64,5 +58,6 @@ dependencies {
     compile 'org.apache.commons:commons-math3:3.6.1'
     testCompile 'org.testng:testng:6.9.6'
     annotationProcessor 'com.github.bumptech.glide:compiler:4.0.0-RC1'
+    compile files('libs/SmartBandAPI.jar')
 }
 apply plugin: 'com.google.gms.google-services'

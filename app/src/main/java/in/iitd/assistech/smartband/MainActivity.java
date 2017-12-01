@@ -28,6 +28,9 @@ import android.widget.ListAdapter;
 import android.widget.ListView;
 import android.widget.Toast;
 
+import com.sounds.ClassifySound;
+
+import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -37,6 +40,7 @@ import jxl.Cell;
 import jxl.Sheet;
 import jxl.Workbook;
 
+import static com.sounds.ClassifySound.PROCESS_LENGTH;
 import static in.iitd.assistech.smartband.Tab3.notificationListItems;
 import static in.iitd.assistech.smartband.Tab3.soundListItems;
 
@@ -54,21 +58,9 @@ public class MainActivity extends AppCompatActivity implements TabLayout.OnTabSe
     private ViewPager viewPager;
     static Pager adapter;
 
-    static double[][] inputWeights;
-    static double[][] layerWeights;
-    static double[][] inputBias;
-    static double[][] outputBias;
-    static double[][] meanTrain;
-    static double[][] devTrain;
-
-    static boolean isPrepNN = false;
     double[][] inputFeat;
 
     private static int PROB_MSG_HNDL = 123;
-
-    /**---------------**/
-    MainProcessing mProcessing;
-    /**---------------**/
 
     /***Variables for audiorecord*/
     private static int REQUEST_MICROPHONE = 101;
@@ -76,14 +68,19 @@ public class MainActivity extends AppCompatActivity implements TabLayout.OnTabSe
     public static final int RECORDER_CHANNELS = AudioFormat.CHANNEL_IN_MONO;
     public static final int RECORDER_AUDIO_ENCODING = AudioFormat.ENCODING_PCM_16BIT;
     public static final int RECORD_TIME_DURATION = 500; //0.5 seconds
+//    BufferElements2Rec =
 
     private AudioRecord recorder = null;
     private Thread recordingThread = null;
+    private Thread processThread = null;
     private boolean isRecording = false;
     int bufferSize;
-    int BufferElements2Rec;
+    static int BufferElements2Rec = (int)RECORDER_SAMPLERATE * RECORD_TIME_DURATION/1000; // number of 16 bits for 3 seconds
     int BytesPerElement;
-    public static short[] sData;
+    public short[] sData = new short[BufferElements2Rec];
+    short[] sDataCopy = new short[sData.length];
+    short[] sDataCopyB = new short[sDataCopy.length];
+    public double[] prob = new double[ClassifySound.numOutput];
 
     private static boolean[] startNotifListState;
     private static boolean[] startSoundListState;
@@ -99,7 +96,11 @@ public class MainActivity extends AppCompatActivity implements TabLayout.OnTabSe
                 double gunShotProb = 0.0;//msg.getData().getDouble("gunShotProb");
                 double ambientProb = msg.getData().getDouble("ambientProb");
                 boolean[] notifState = adapter.getInitialNotifListState();
-                adapter.editTab2Text(hornProb, barkProb, gunShotProb, ambientProb, notifState);
+                double[] prob = new double[3];
+                prob[0] = hornProb;
+                prob[1] = barkProb;
+                prob[2] = ambientProb;
+                adapter.editTab2Text(prob, notifState);
             }
         }
     };
@@ -216,19 +217,11 @@ public class MainActivity extends AppCompatActivity implements TabLayout.OnTabSe
 //        tabLayout.setOnTabSelectedListener(this);
         tabLayout.addOnTabSelectedListener(this);
 
-        /**-------------**/
+//        sData = new short[BufferElements2Rec];
+//        for(int i=0; i<sData.length; i++){
+//            sData[i] = (short)0;
+//        }
 
-        /**----------**/
-        Thread prepNNThread = new Thread(new Runnable() {
-            @Override
-            public void run() {
-                synchronized (this){
-                    prepNN();
-                    isPrepNN = true;
-                }
-            }
-        });
-        prepNNThread.start();
         if (ContextCompat.checkSelfPermission(this,
                 Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
 
@@ -247,7 +240,12 @@ public class MainActivity extends AppCompatActivity implements TabLayout.OnTabSe
     @Override
     public void onButtonClick(String text) {
         if(text == "MicReadButton"){
-            processMicSound();
+            try{
+                Log.e(TAG, "HEY YOU|");
+                processMicSound();
+            }catch (InterruptedException e){
+                Log.e(TAG, "onButtonClick() " + e.toString());
+            }
         }else if(text == "StopRecordButton"){
             stopRecording();
         }
@@ -258,142 +256,87 @@ public class MainActivity extends AppCompatActivity implements TabLayout.OnTabSe
     /**----------------------------------------**/
     /**----------For Sound Processing and stuff----------**/
     //Load the weights and bias in the form of matrix from sheet in Assets Folder
-    private void prepNN() {
-        try{
-            AssetManager am = getAssets();
-            InputStream is = am.open("weights_v1.3.xls");
-            final Workbook wb = Workbook.getWorkbook(is);
 
-            Sheet inputWeightSheet = wb.getSheet("InputWeight");
-            int inputWeightSheetRows = inputWeightSheet.getRows();
-            int inputWeightSheetColumns = inputWeightSheet.getColumns();
-            inputWeights = new double[inputWeightSheetRows][inputWeightSheetColumns];
-
-            for (int i = 0; i<inputWeightSheetRows; i++){
-                for (int j=0; j<inputWeightSheetColumns; j++){
-                    Cell z = inputWeightSheet.getCell(j, i);
-                    inputWeights[i][j] = Double.parseDouble(z.getContents());
-                }
-            }
-
-            Sheet layerWeightSheet = wb.getSheet("LayerWeight");
-            int layerWeightSheetRows = layerWeightSheet.getRows();
-            int layerWeightSheetColumns = layerWeightSheet.getColumns();
-            layerWeights = new double[layerWeightSheetRows][layerWeightSheetColumns];
-
-            for (int i = 0; i<layerWeightSheetRows; i++){
-                for (int j=0; j<layerWeightSheetColumns; j++){
-                    Cell z = layerWeightSheet.getCell(j, i);
-                    layerWeights[i][j] = Double.parseDouble(z.getContents());
-                }
-            }
-
-            Sheet inputBiasSheet = wb.getSheet("InputBias");
-            int inputBiasSheetRows = inputBiasSheet.getRows();
-            int inputBiasSheetColumns = inputBiasSheet.getColumns();
-            inputBias = new double[inputBiasSheetRows][inputBiasSheetColumns];
-
-            for (int i=0; i<inputBiasSheetRows; i++){
-                for (int j=0; j<inputBiasSheetColumns; j++){
-                    Cell z = inputBiasSheet.getCell(j, i);
-                    inputBias[i][j] = Double.parseDouble(z.getContents());
-                }
-            }
-
-            Sheet outputBiasSheet = wb.getSheet("OutputBias");
-            int outputBiasSheetRows = outputBiasSheet.getRows();
-            int outputBiasSheetColumns = outputBiasSheet.getColumns();
-            outputBias = new double[outputBiasSheetRows][outputBiasSheetColumns];
-
-            for (int i=0; i<outputBiasSheetRows; i++){
-                for (int j=0; j<outputBiasSheetColumns; j++){
-                    Cell z = outputBiasSheet.getCell(j, i);
-                    outputBias[i][j] = Double.parseDouble(z.getContents());
-                }
-            }
-
-            Sheet meanTrainSheet = wb.getSheet("MeanTrain");
-            int meanTrainSheetRows = meanTrainSheet.getRows();
-            int meanTrainSheetColumns = meanTrainSheet.getColumns();
-            meanTrain = new double[meanTrainSheetRows][meanTrainSheetColumns];
-
-            for (int i=0; i<meanTrainSheetRows; i++){
-                for (int j=0; j<meanTrainSheetColumns; j++){
-                    Cell z = meanTrainSheet.getCell(j, i);
-                    meanTrain[i][j] = Double.parseDouble(z.getContents());
-                }
-            }
-
-            Sheet devTrainSheet = wb.getSheet("DevTrain");
-            int devTrainSheetRows = devTrainSheet.getRows();
-            int devTrainSheetColumns = devTrainSheet.getColumns();
-            devTrain = new double[devTrainSheetRows][devTrainSheetColumns];
-
-            for (int i=0; i<devTrainSheetRows; i++){
-                for (int j=0; j<devTrainSheetColumns; j++){
-                    Cell z = devTrainSheet.getCell(j, i);
-                    devTrain[i][j] = Double.parseDouble(z.getContents());
-                }
-            }
-
-
-            Sheet inputFeatSheet = wb.getSheet("InputFeat");
-            int inputFeatSheetRows = inputFeatSheet.getRows();
-            int inputFeatSheetColumns = inputFeatSheet.getColumns();
-            inputFeat = new double[inputFeatSheetRows][inputFeatSheetColumns];
-
-            for (int i=0; i<inputFeatSheetRows; i++){
-                for (int j=0; j<inputFeatSheetColumns; j++){
-                    Cell z = inputFeatSheet.getCell(j, i);
-                    inputFeat[i][j] = Double.parseDouble(z.getContents());
-                }
-            }
-        } catch (Exception e){
-            Log.e(TAG, e.toString());
+    public void processMicSound() throws InterruptedException{
+        for(int i=0; i<sData.length; i++){
+            sData[i] = (short)0;
         }
-    }
-
-    public void processMicSound(){
         if(!isRecording){
-            //processing = true;
-            if(!isPrepNN){
-                Toast.makeText(this, "Press Again", Toast.LENGTH_SHORT).show();
-            }else{
-                BufferElements2Rec = RECORDER_SAMPLERATE * RECORD_TIME_DURATION/1000; // number of 16 bits for 3 seconds
-                //BufferElements2Rec = 24000;
-                System.out.println(BufferElements2Rec);
+            BufferElements2Rec = RECORDER_SAMPLERATE * RECORD_TIME_DURATION/1000; // number of 16 bits for 3 seconds
+            //BufferElements2Rec = 24000;
+            Log.e(TAG, Integer.toString(BufferElements2Rec));
 
-                BytesPerElement = 2; // 2 bytes in 16bit format
-                if (bufferSize != AudioRecord.ERROR_BAD_VALUE && bufferSize > 0){
-                    recorder = new AudioRecord(MediaRecorder.AudioSource.MIC,
-                            RECORDER_SAMPLERATE, RECORDER_CHANNELS,
-                            RECORDER_AUDIO_ENCODING, BufferElements2Rec * BytesPerElement);
+//            int bufrSize = AudioRecord.getMinBufferSize(RECORDER_SAMPLERATE, RECORDER_CHANNELS, RECORDER_AUDIO_ENCODING);
+            BytesPerElement = 2; // 2 bytes in 16bit format
+            if (bufferSize != AudioRecord.ERROR_BAD_VALUE && bufferSize > 0){
+                recorder = new AudioRecord(MediaRecorder.AudioSource.MIC,
+                        RECORDER_SAMPLERATE, RECORDER_CHANNELS,
+                        RECORDER_AUDIO_ENCODING, BufferElements2Rec * BytesPerElement);//bufrSize
+                recorder.startRecording();
+            }
 
-
-                    recorder.startRecording();
-                }
-
-                isRecording = true;
-                recordingThread = new Thread(new Runnable() {
-                    public void run() {
-                        while (isRecording) {
-                            synchronized (this){
-                                sData = new short[BufferElements2Rec];
-                                // gets the voice output from microphone to byte format
-                                recorder.read(sData, 0, BufferElements2Rec);
-
-                                //TODO: Properly make the partition of sData
-//                                sDataPart1 = Arrays.copyOfRange(sData, 0, PROCESS_LENGTH);
+            isRecording = true;
+            recordingThread = new Thread(new Runnable() {
+                public void run() {
+                    while (isRecording) {
+                        synchronized (this){
+//                            sData = new short[BufferElements2Rec];
+                            recorder.read(sData, 0, BufferElements2Rec);
+                            sDataCopy = Arrays.copyOfRange(sData, 0, PROCESS_LENGTH);
+                            sDataCopyB = Arrays.copyOfRange(sDataCopy, 0, PROCESS_LENGTH);
 
 //                                TODO:processAudioEvent();
-                                mProcessing = new MainProcessing(MainActivity.this);
-                                mProcessing.processAudioEvent();
-                            }
+//                            mProcessing = new MainProcessing(MainActivity.this);
+//                            mProcessing.processAudioEvent()
+//                            try{
+////                                for(int i=0; i<sData.length; i++){
+////                                    sDataCopy[i] = sData[i];
+////                                }
+//                                long start_time = System.nanoTime();
+//                                prob = ClassifySound.getProb(sDataCopy);
+//                                long end_time = System.nanoTime();
+//                                double temp = (start_time - end_time)*1.0/1000000;
+//                                Log.e(TAG + " TIME ", Double.toString(temp));
+//                                Log.e(TAG, Double.toString(prob[0]) + ", " + Double.toString(prob[1])
+//                                        + ", " + Double.toString(prob[2]));
+//                                boolean[] notifState = adapter.getInitialNotifListState();
+//                                adapter.editTab2Text(prob, notifState);
+//                            }catch(Exception e){
+//                                Log.e(TAG, e.toString());
+//                            }
                         }
                     }
-                }, "AudioRecorder Thread");
-                recordingThread.start();
-            }
+                }
+            }, "AudioRecorder Thread");
+            recordingThread.start();
+
+            processThread = new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    synchronized (this){
+                        try{
+                            Log.e(TAG, "Not Here class");
+//                            short[] sDataCopy = new short[sData.length];
+//                            for(int i=0; i<sData.length; i++){
+//                                sDataCopy[i] = sData[i];
+//                            }
+//                        Log.e(TAG, s);
+                            long start_time = System.nanoTime();
+                            prob = ClassifySound.getProb(sDataCopy);
+                            setProbOut(prob);
+                            long end_time = System.nanoTime();
+                            double temp = (start_time - end_time)*1.0/1000000;
+                            Log.e(TAG + " TIME ", Double.toString(temp));
+                            Log.e(TAG, Double.toString(prob[0]) + ", " + Double.toString(prob[1])
+                                    + ", " + Double.toString(prob[2]));
+                        }catch(Exception e){
+                            Log.e(TAG, e.toString());
+                        }
+                    }
+                }
+            });
+            processThread.start();
+//            processThread.join();
         } else{
             Toast.makeText(this, "Recording started", Toast.LENGTH_SHORT).show();
         }
@@ -405,6 +348,7 @@ public class MainActivity extends AppCompatActivity implements TabLayout.OnTabSe
             isRecording = false;
             recorder.stop();
             recorder.release();
+            processThread.stop();
             recorder = null;
             recordingThread = null;
         }
@@ -434,14 +378,14 @@ public class MainActivity extends AppCompatActivity implements TabLayout.OnTabSe
 //        adapter.editTab2Text(outProb[0], outProb[1], outProb[2]);
         double hornProb = (outProb[0]);
 //        double gunShotProb = (outProb[2]);
-//        double dogBarkProb = (outProb[1]);
-        double ambientProb = (outProb[1]);
+        double dogBarkProb = (outProb[1]);
+        double ambientProb = (outProb[2]);
 
         final Message msg = new Message();
         final Bundle bundle = new Bundle();
         bundle.putInt("what", PROB_MSG_HNDL);
         bundle.putDouble("hornProb", hornProb);
-//        bundle.putDouble("dogBarkProb", dogBarkProb);
+        bundle.putDouble("dogBarkProb", dogBarkProb);
 //        bundle.putDouble("gunShotProb", gunShotProb);
         bundle.putDouble("ambientProb", ambientProb);
         msg.setData(bundle);

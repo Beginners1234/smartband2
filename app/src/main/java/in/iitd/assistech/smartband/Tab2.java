@@ -150,31 +150,11 @@ public class Tab2 extends Fragment implements View.OnClickListener{
         }
     }
 
-    public void editValue(double hornProb, double barkProb, double gunShotProb, double ambientProb, boolean[] notifState){
-//        if(hornProb>0.85){
-//            histListItems.add("Horn Detected");
-//            historyNotifAdapter.notifyDataSetChanged();
-//            NotificationCompat.Builder mBuilder =
-//                    new NotificationCompat.Builder(getActivity())
-//                            .setSmallIcon(R.drawable.notif_icon)
-//                            .setContentTitle("My notification")
-//                            .setContentText("Hello World!");
-//
-//            int mNotificationId = 001;
-//            // Gets an instance of the NotificationManager service
-//            NotificationManager mNotifyMgr =
-//                    (NotificationManager) getContext().getSystemService(NOTIFICATION_SERVICE);
-//            // Builds the notification and issues it.
-//            mNotifyMgr.notify(mNotificationId, mBuilder.build());
-//            Vibrator v = (Vibrator) getContext().getSystemService(Context.VIBRATOR_SERVICE);
-//            // Vibrate for 500 milliseconds
-//            v.vibrate(500);
-//        }
-
+    public void editValue(double[] prob, boolean[] notifState){
         double[] output = new double[3];
-        output[0] = hornProb;
-        output[1] = barkProb;
-        output[2] = ambientProb;
+        output[0] = prob[0];//hornProb;
+        output[1] = prob[1];//barkProb;
+        output[2] = prob[2];//ambientProb;
         String[] textOut = {"Horn Detected", "DogBark Detected", "Ambience"};
         String[] textDes = {"There might be a car around!",
                         "Beware of DOGS!!!",
@@ -210,7 +190,7 @@ public class Tab2 extends Fragment implements View.OnClickListener{
         }
         hornValue.setText(String.format("%.2g%n", output[0]));
         barkValue.setText(String.format("%.2g%n", output[1]));
-        gunShotValue.setText(String.format("%.2g%n", gunShotProb));
+//        gunShotValue.setText(String.format("%.2g%n", gunShotProb));
         ambientValue.setText(String.format("%.2g%n", output[2]));
     }
 
@@ -223,7 +203,7 @@ public class Tab2 extends Fragment implements View.OnClickListener{
             if (!file.exists()){
                 file.createNewFile();
             }
-            FileOutputStream fos  = getContext().openFileOutput(filename, MODE_APPEND);
+            FileOutputStream fos  = getContext().openFileOutput(filename, getContext().MODE_APPEND);
 //                            Writer out = new BufferedWriter(new OutputStreamWriter(openFileOutput(file.getName(), MODE_APPEND)));
 
             android.text.format.DateFormat df = new android.text.format.DateFormat();
