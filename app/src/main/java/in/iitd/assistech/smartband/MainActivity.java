@@ -3,6 +3,7 @@ package in.iitd.assistech.smartband;
 import android.Manifest;
 import android.app.NotificationManager;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.content.res.AssetManager;
@@ -10,6 +11,7 @@ import android.media.AudioFormat;
 import android.media.AudioRecord;
 import android.media.MediaRecorder;
 import android.os.Handler;
+import android.os.HandlerThread;
 import android.os.Message;
 import android.os.PersistableBundle;
 import android.os.Vibrator;
@@ -19,11 +21,14 @@ import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.NotificationCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v4.view.ViewPager;
+import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.ViewGroup;
 import android.view.Window;
 import android.view.WindowManager;
+import android.widget.ImageView;
 import android.widget.ListAdapter;
 import android.widget.ListView;
 import android.widget.Toast;
@@ -35,6 +40,8 @@ import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Timer;
+import java.util.TimerTask;
 
 import jxl.Cell;
 import jxl.Sheet;
@@ -45,7 +52,7 @@ import static in.iitd.assistech.smartband.Tab3.notificationListItems;
 import static in.iitd.assistech.smartband.Tab3.soundListItems;
 
 public class MainActivity extends AppCompatActivity implements TabLayout.OnTabSelectedListener,
-       OnTabEvent{
+        OnTabEvent{
 
     private static final String TAG = "MainActivity";
     public static String NAME;
@@ -58,52 +65,61 @@ public class MainActivity extends AppCompatActivity implements TabLayout.OnTabSe
     private ViewPager viewPager;
     static Pager adapter;
 
-    double[][] inputFeat;
-
-    private static int PROB_MSG_HNDL = 123;
-
     /***Variables for audiorecord*/
     private static int REQUEST_MICROPHONE = 101;
-    public static final int RECORDER_SAMPLERATE = 44100;
+    public static final int RECORDER_SAMPLERATE = ClassifySound.RECORDER_SAMPLERATE;
     public static final int RECORDER_CHANNELS = AudioFormat.CHANNEL_IN_MONO;
     public static final int RECORDER_AUDIO_ENCODING = AudioFormat.ENCODING_PCM_16BIT;
     public static final int RECORD_TIME_DURATION = 500; //0.5 seconds
-//    BufferElements2Rec =
+    static int BufferElements2Rec = (int)RECORDER_SAMPLERATE * RECORD_TIME_DURATION/1000; // number of 16 bits for 3 seconds
+    //    BufferElements2Rec =
+    static String[] warnMsgs = {"Car Horn Detected", "Dog Bark Detected", "Ambient"};
+    static int[] warnImgs = new int[] {R.drawable.car_horn, R.drawable.dog_bark, 0};
 
     private AudioRecord recorder = null;
     private Thread recordingThread = null;
-    private Thread processThread = null;
     private boolean isRecording = false;
     int bufferSize;
-    static int BufferElements2Rec = (int)RECORDER_SAMPLERATE * RECORD_TIME_DURATION/1000; // number of 16 bits for 3 seconds
     int BytesPerElement;
     public short[] sData = new short[BufferElements2Rec];
-    short[] sDataCopy = new short[sData.length];
-    short[] sDataCopyB = new short[sDataCopy.length];
-    public double[] prob = new double[ClassifySound.numOutput];
+    static double thresh_prob = 0.75;
+    double[][] history_prob = new double[5][ClassifySound.numOutput];
+    int hist_prob_counter = 0;
 
     private static boolean[] startNotifListState;
     private static boolean[] startSoundListState;
+    /*
+    public AlertDialog.Builder warnDB;
+    public AlertDialog warnDialog;
+    */
+    public AlertDialog myDialog;
 
 
-    static Handler handler = new Handler(){
+    static Handler uiHandler = new Handler(){
         @Override
         public void handleMessage(Message msg) {
-            if(msg.getData().getInt("what") == PROB_MSG_HNDL){
-                //TODO create an instance of Tab2 fragment and call editValue()
-                double hornProb = msg.getData().getDouble("hornProb");
-                double barkProb = 0.0;//msg.getData().getDouble("dogBarkProb");
-                double gunShotProb = 0.0;//msg.getData().getDouble("gunShotProb");
-                double ambientProb = msg.getData().getDouble("ambientProb");
-                boolean[] notifState = adapter.getInitialNotifListState();
-                double[] prob = new double[3];
-                prob[0] = hornProb;
-                prob[1] = barkProb;
-                prob[2] = ambientProb;
-                adapter.editTab2Text(prob, notifState);
-            }
+            double[] prob_sound = (double[]) msg.obj;
+            boolean[] notifState = adapter.getInitialNotifListState();
+            adapter.editTab2Text(prob_sound, notifState);
         }
     };
+
+    void setProbOut(double[] outProb){
+        //send msg to edit value of prob on screen
+        //Launch dialog interface;
+        Message message = uiHandler.obtainMessage();
+        message.obj = outProb;
+        message.sendToTarget();
+//        for(int i=0; i<(outProb.length-1); i++){
+//            if(outProb[i]> 0.80){
+//                showDialog(MainActivity.this, i, outProb);
+//                Message message = uiHandler.obtainMessage();
+//                message.obj = outProb;
+//                message.sendToTarget();
+//            }
+//        }
+    }
+
 
     @Override
     protected void onSaveInstanceState(Bundle outState) {
@@ -233,8 +249,7 @@ public class MainActivity extends AppCompatActivity implements TabLayout.OnTabSe
         bufferSize = AudioRecord.getMinBufferSize(RECORDER_SAMPLERATE,
                 RECORDER_CHANNELS, RECORDER_AUDIO_ENCODING);
 
-        /**-------------------------------**/
-
+        viewPager.setCurrentItem(1);
     }
 
     @Override
@@ -261,12 +276,66 @@ public class MainActivity extends AppCompatActivity implements TabLayout.OnTabSe
         for(int i=0; i<sData.length; i++){
             sData[i] = (short)0;
         }
-        if(!isRecording){
-            BufferElements2Rec = RECORDER_SAMPLERATE * RECORD_TIME_DURATION/1000; // number of 16 bits for 3 seconds
-            //BufferElements2Rec = 24000;
-            Log.e(TAG, Integer.toString(BufferElements2Rec));
+        for(int i=0; i<history_prob.length; i++){
+            for(int j=0; j<history_prob[0].length; j++){
+                history_prob[i][j] = 0.0;
+            }
+        }
+        //@link https://stackoverflow.com/questions/40459490/processing-in-audiorecord-thread
+        HandlerThread myHandlerThread = new HandlerThread("my-handler-thread");
+        myHandlerThread.start();
 
-//            int bufrSize = AudioRecord.getMinBufferSize(RECORDER_SAMPLERATE, RECORDER_CHANNELS, RECORDER_AUDIO_ENCODING);
+        //make below gloabl and remove final
+        final Handler myHandler = new Handler(myHandlerThread.getLooper(), new Handler.Callback() {
+            @Override
+            public boolean handleMessage(Message msg) {
+//                someHeavyProcessing((short[]) msg.obj, msg.arg1);
+                try{
+                    Log.e(TAG, "handleMessage");
+                    long start_time = System.nanoTime();
+
+                    //Calculate probability using ClassifySound.
+                    short[] temp_sound = (short[]) msg.obj;
+                    short[] temp1 = Arrays.copyOfRange(temp_sound, 0, PROCESS_LENGTH);
+                    double[] temp_prob = ClassifySound.getProb(temp1);
+                    Log.e(TAG + " temp_prob", Double.toString(temp_prob[0]) + ", " + Double.toString(temp_prob[1])
+                            + ", " + Double.toString(temp_prob[2]));
+
+                    setProbOut(temp_prob);
+
+                    for(int i=0; i<temp_prob.length; i++){
+                        if(Double.isNaN(temp_prob[i])) temp_prob[i] = 1.0;
+                        history_prob[hist_prob_counter][i] = temp_prob[i];
+                    }
+                    hist_prob_counter++;//update the counter and make it zero if equals length of hist
+                    if(hist_prob_counter >= history_prob.length) hist_prob_counter = 0;
+
+                    double[] mean_prob = new double[temp_prob.length];
+                    for(int j=0; j<mean_prob.length; j++){
+                        double sum = 0;
+                        for(int i=0; i<history_prob.length; i++){
+                            sum += history_prob[i][j];
+                        }
+                        mean_prob[j] = sum * 1.0/history_prob.length;
+                    }
+
+//                    setProbOut(mean_prob);
+
+                    Log.e(TAG + " mean_prob ", Double.toString(mean_prob[0]) + ", " + Double.toString(mean_prob[1])
+                            + ", " + Double.toString(mean_prob[2]));
+                    long end_time = System.nanoTime();
+                    double temp = (end_time - start_time)*1.0/1000000;
+                    Log.e(TAG, "TIME : " + Double.toString(temp));
+//                    Log.e(TAG, Double.toString(mean_prob[0]) + ", " + Double.toString(mean_prob[1])
+//                                        + ", " + Double.toString(mean_prob[2]));
+                }catch (Exception e){
+                    System.out.print(TAG + " myHandler : " + e.toString());
+                }
+                return true;
+            }
+        });
+
+        if(!isRecording){
             BytesPerElement = 2; // 2 bytes in 16bit format
             if (bufferSize != AudioRecord.ERROR_BAD_VALUE && bufferSize > 0){
                 recorder = new AudioRecord(MediaRecorder.AudioSource.MIC,
@@ -280,63 +349,17 @@ public class MainActivity extends AppCompatActivity implements TabLayout.OnTabSe
                 public void run() {
                     while (isRecording) {
                         synchronized (this){
-//                            sData = new short[BufferElements2Rec];
-                            recorder.read(sData, 0, BufferElements2Rec);
-                            sDataCopy = Arrays.copyOfRange(sData, 0, PROCESS_LENGTH);
-                            sDataCopyB = Arrays.copyOfRange(sDataCopy, 0, PROCESS_LENGTH);
-
-//                                TODO:processAudioEvent();
-//                            mProcessing = new MainProcessing(MainActivity.this);
-//                            mProcessing.processAudioEvent()
-//                            try{
-////                                for(int i=0; i<sData.length; i++){
-////                                    sDataCopy[i] = sData[i];
-////                                }
-//                                long start_time = System.nanoTime();
-//                                prob = ClassifySound.getProb(sDataCopy);
-//                                long end_time = System.nanoTime();
-//                                double temp = (start_time - end_time)*1.0/1000000;
-//                                Log.e(TAG + " TIME ", Double.toString(temp));
-//                                Log.e(TAG, Double.toString(prob[0]) + ", " + Double.toString(prob[1])
-//                                        + ", " + Double.toString(prob[2]));
-//                                boolean[] notifState = adapter.getInitialNotifListState();
-//                                adapter.editTab2Text(prob, notifState);
-//                            }catch(Exception e){
-//                                Log.e(TAG, e.toString());
-//                            }
+                            int num_read = recorder.read(sData, 0, BufferElements2Rec);
+                            Message message = myHandler.obtainMessage();
+                            message.obj = sData;
+                            message.arg1 = num_read;
+                            message.sendToTarget();
                         }
                     }
                 }
             }, "AudioRecorder Thread");
             recordingThread.start();
 
-            processThread = new Thread(new Runnable() {
-                @Override
-                public void run() {
-                    synchronized (this){
-                        try{
-                            Log.e(TAG, "Not Here class");
-//                            short[] sDataCopy = new short[sData.length];
-//                            for(int i=0; i<sData.length; i++){
-//                                sDataCopy[i] = sData[i];
-//                            }
-//                        Log.e(TAG, s);
-                            long start_time = System.nanoTime();
-                            prob = ClassifySound.getProb(sDataCopy);
-                            setProbOut(prob);
-                            long end_time = System.nanoTime();
-                            double temp = (start_time - end_time)*1.0/1000000;
-                            Log.e(TAG + " TIME ", Double.toString(temp));
-                            Log.e(TAG, Double.toString(prob[0]) + ", " + Double.toString(prob[1])
-                                    + ", " + Double.toString(prob[2]));
-                        }catch(Exception e){
-                            Log.e(TAG, e.toString());
-                        }
-                    }
-                }
-            });
-            processThread.start();
-//            processThread.join();
         } else{
             Toast.makeText(this, "Recording started", Toast.LENGTH_SHORT).show();
         }
@@ -348,7 +371,6 @@ public class MainActivity extends AppCompatActivity implements TabLayout.OnTabSe
             isRecording = false;
             recorder.stop();
             recorder.release();
-            processThread.stop();
             recorder = null;
             recordingThread = null;
         }
@@ -356,13 +378,54 @@ public class MainActivity extends AppCompatActivity implements TabLayout.OnTabSe
 
     /**---------------------------------------**/
 
+    public void showDialog(Context context, int idx, double[] outProb) {
+        if (myDialog != null && myDialog.isShowing()) return;
+
+        AlertDialog.Builder builder = new AlertDialog.Builder(context);
+        builder.setTitle(warnMsgs[idx]);
+        ImageView wrnImg = new ImageView(MainActivity.this);
+        //TODO No Text clickable button for dog bark case dialog
+//        ViewGroup.LayoutParams imgParams = wrnImg.getLayoutParams();
+//        imgParams.width = 60;
+//        imgParams.height = 60;
+//        wrnImg.setLayoutParams(imgParams);
+        wrnImg.setImageResource(warnImgs[idx]);
+        builder.setView(wrnImg);
+//        builder.setMessage("Message");
+//        builder.setPositiveButton("ok", new DialogInterface.OnClickListener() {
+//            public void onClick(DialogInterface dialog, int arg1) {
+//                dialog.dismiss();
+//            }});
+        builder.setPositiveButton("Ok, Thank You!", new DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface dialog, int arg1) {
+                dialog.dismiss();
+            }
+        });
+        builder.setNegativeButton("Wrong Detection", new DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface dialog, int arg1) {
+                dialog.dismiss();
+            }
+        });
+
+        builder.setCancelable(true);
+        myDialog = builder.create();
+        myDialog.show();
+        final Timer timer2 = new Timer();
+        timer2.schedule(new TimerTask() {
+            public void run() {
+                myDialog.dismiss();
+                Log.e(TAG, "TIMER Running");
+                timer2.cancel(); //this will cancel the timer of the system
+            }
+        }, 15000); // the timer will count 5 seconds....
+    }
+
     /**-----------For Tab Layout--------------**/
     @Override
     public void onTabSelected(TabLayout.Tab tab) {
         viewPager.setCurrentItem(tab.getPosition());
         tabLayout.getTabAt(tab.getPosition()).select();
     }
-
 
     @Override
     public void onTabUnselected(TabLayout.Tab tab) {
@@ -372,24 +435,6 @@ public class MainActivity extends AppCompatActivity implements TabLayout.OnTabSe
     @Override
     public void onTabReselected(TabLayout.Tab tab) {
 
-    }
-
-    static void setProbOut(double[] outProb){
-//        adapter.editTab2Text(outProb[0], outProb[1], outProb[2]);
-        double hornProb = (outProb[0]);
-//        double gunShotProb = (outProb[2]);
-        double dogBarkProb = (outProb[1]);
-        double ambientProb = (outProb[2]);
-
-        final Message msg = new Message();
-        final Bundle bundle = new Bundle();
-        bundle.putInt("what", PROB_MSG_HNDL);
-        bundle.putDouble("hornProb", hornProb);
-        bundle.putDouble("dogBarkProb", dogBarkProb);
-//        bundle.putDouble("gunShotProb", gunShotProb);
-        bundle.putDouble("ambientProb", ambientProb);
-        msg.setData(bundle);
-        handler.sendMessage(msg);
     }
 
     static boolean[] getStartNotifListState(){

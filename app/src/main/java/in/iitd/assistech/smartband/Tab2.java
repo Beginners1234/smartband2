@@ -53,9 +53,9 @@ public class Tab2 extends Fragment implements View.OnClickListener{
 
     private ImageButton startButton;
     private ImageButton stopButton;
-    private ListView historyListView;
-    private List<String> histListItems;
-    private HistoryNotifAdapter historyNotifAdapter;
+//    private ListView historyListView;
+//    private List<String> histListItems;
+//    private HistoryNotifAdapter historyNotifAdapter;
 
     private OnTabEvent mListener;
 
@@ -87,7 +87,7 @@ public class Tab2 extends Fragment implements View.OnClickListener{
 
         startButton = (ImageButton) view.findViewById(R.id.start_button);
         stopButton = (ImageButton) view.findViewById(R.id.stop_button);
-        historyListView = (ListView)view.findViewById(R.id.historyListView);
+//        historyListView = (ListView)view.findViewById(R.id.historyListView);
 
         startButton.setMaxWidth(buttonSize);
         startButton.setMaxHeight(buttonSize);
@@ -98,16 +98,16 @@ public class Tab2 extends Fragment implements View.OnClickListener{
         startButton.setOnClickListener(this);
         stopRecordButton.setOnClickListener(this);
         stopButton.setOnClickListener(this);
-        historyListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-            @Override
-            public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
-                historyNotifAdapter.notifyDataSetChanged();
-            }
-        });
+//        historyListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+//            @Override
+//            public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
+//                historyNotifAdapter.notifyDataSetChanged();
+//            }
+//        });
 
-        histListItems = new ArrayList<String>();
-        historyNotifAdapter = new HistoryNotifAdapter(getActivity(), histListItems);
-        historyListView.setAdapter(historyNotifAdapter);
+//        histListItems = new ArrayList<String>();
+//        historyNotifAdapter = new HistoryNotifAdapter(getActivity(), histListItems);
+//        historyListView.setAdapter(historyNotifAdapter);
 
 
         return view;
@@ -150,23 +150,22 @@ public class Tab2 extends Fragment implements View.OnClickListener{
         }
     }
 
-    public void editValue(double[] prob, boolean[] notifState){
-        double[] output = new double[3];
-        output[0] = prob[0];//hornProb;
-        output[1] = prob[1];//barkProb;
-        output[2] = prob[2];//ambientProb;
+    public void editValue(double[] output, boolean[] notifState){
+//        double[] output = new double[3];
+//        output[0] = prob[0];//hornProb;
+//        output[1] = prob[1];//barkProb;
+//        output[2] = prob[2];//ambientProb;
         String[] textOut = {"Horn Detected", "DogBark Detected", "Ambience"};
         String[] textDes = {"There might be a car around!",
                         "Beware of DOGS!!!",
                         "Ambience"};
-        String filename = "notif_log_smartband.csv";
+        String filename = "prob_history.csv";
+        writeToExcel(filename, output);
+        /*
         for (int i=0; i<(output.length-1); i++){
             if(output[i]>0.85){
-                histListItems.add(textOut[i]);
-
-                writeToExcel(filename, output, textOut[i]);
-
-                historyNotifAdapter.notifyDataSetChanged();
+//                histListItems.add(textOut[i]);
+//                historyNotifAdapter.notifyDataSetChanged();
                 NotificationCompat.Builder mBuilder =
                         new NotificationCompat.Builder(getActivity())
                                 .setSmallIcon(R.drawable.notif_icon)
@@ -175,11 +174,12 @@ public class Tab2 extends Fragment implements View.OnClickListener{
 
                 int mNotificationId = 001;
                 // Gets an instance of the NotificationManager service
-                NotificationManager mNotifyMgr =
-                        (NotificationManager) getContext().getSystemService(NOTIFICATION_SERVICE);
+                if(getContext().getSystemService(NOTIFICATION_SERVICE) != null) {
+                    NotificationManager mNotifyMgr =
+                            (NotificationManager) getContext().getSystemService(NOTIFICATION_SERVICE);
+                    mNotifyMgr.notify(mNotificationId, mBuilder.build());
+                }
                 // Builds the notification and issues it.
-                mNotifyMgr.notify(mNotificationId, mBuilder.build());
-
                 //Vibrate
                 if(notifState[0]){
                     Vibrator v = (Vibrator) getContext().getSystemService(Context.VIBRATOR_SERVICE);
@@ -188,13 +188,14 @@ public class Tab2 extends Fragment implements View.OnClickListener{
                 }
             }
         }
+        */
         hornValue.setText(String.format("%.2g%n", output[0]));
         barkValue.setText(String.format("%.2g%n", output[1]));
 //        gunShotValue.setText(String.format("%.2g%n", gunShotProb));
         ambientValue.setText(String.format("%.2g%n", output[2]));
     }
 
-    public void writeToExcel(String filename, double[] output, String detail){
+    public void writeToExcel(String filename, double[] output){ //String detail
         File external = Environment.getExternalStorageDirectory();
         String sdcardPath = external.getPath() + "/SmartBand/";
         // to this path add a new directory path
@@ -219,7 +220,8 @@ public class Tab2 extends Fragment implements View.OnClickListener{
             for(int i=0; i<output.length; i++){
                 data += output[i] + ",";
             }
-            data += detail + "\n";
+            data += "\n";
+//            data += detail + "\n";
 
             out.write(data);
             out.close();
