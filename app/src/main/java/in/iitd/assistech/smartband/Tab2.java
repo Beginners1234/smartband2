@@ -159,7 +159,7 @@ public class Tab2 extends Fragment implements View.OnClickListener{
         String[] textDes = {"There might be a car around!",
                         "Beware of DOGS!!!",
                         "Ambience"};
-        String filename = "prob_history.csv";
+        String filename = "prob_all_extra.csv";
         writeToExcel(filename, output);
         /*
         for (int i=0; i<(output.length-1); i++){
@@ -191,8 +191,8 @@ public class Tab2 extends Fragment implements View.OnClickListener{
         */
         hornValue.setText(String.format("%.2g%n", output[0]));
         barkValue.setText(String.format("%.2g%n", output[1]));
-//        gunShotValue.setText(String.format("%.2g%n", gunShotProb));
-        ambientValue.setText(String.format("%.2g%n", output[2]));
+//        gunShotValue.setText(String.format("%.2g%n", output[3]));
+//        ambientValue.setText(String.format("%.2g%n", output[2]));
     }
 
     public void writeToExcel(String filename, double[] output){ //String detail
