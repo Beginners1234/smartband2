@@ -50,7 +50,8 @@ public class Tab2 extends Fragment implements View.OnClickListener{
     private TextView ambientValue;
     private Button micReadButton;
     private Button stopRecordButton;
-
+    private Button soundRecordButton;
+    private Button stopSoundRecord;
     private ImageButton startButton;
     private ImageButton stopButton;
 //    private ListView historyListView;
@@ -78,6 +79,8 @@ public class Tab2 extends Fragment implements View.OnClickListener{
         ambientValue = (TextView)view.findViewById(R.id.ambientValue);
         micReadButton = (Button)view.findViewById(R.id.micReadButton);
         stopRecordButton = (Button)view.findViewById(R.id.stopRecordButton);
+        soundRecordButton = (Button)view.findViewById(R.id.startsoundRecord);
+        stopSoundRecord = (Button)view.findViewById(R.id.stopSoundRecord);
 
         Display display = getActivity().getWindowManager().getDefaultDisplay();
         Point screenSize = new Point();
@@ -98,6 +101,8 @@ public class Tab2 extends Fragment implements View.OnClickListener{
         startButton.setOnClickListener(this);
         stopRecordButton.setOnClickListener(this);
         stopButton.setOnClickListener(this);
+        soundRecordButton.setOnClickListener(this);
+        stopSoundRecord.setOnClickListener(this);
 //        historyListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
 //            @Override
 //            public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
@@ -137,6 +142,13 @@ public class Tab2 extends Fragment implements View.OnClickListener{
                 startButton.setVisibility(View.VISIBLE);
                 stopButton.setVisibility(View.GONE);
                 break;
+            case R.id.startsoundRecord:
+                Log.e(TAG, "Record}");
+                mListener.onButtonClick("SoundRecord");
+                break;
+            case R.id.stopSoundRecord:
+                mListener.onButtonClick("StopRecord");
+                break;
         }
     }
 
@@ -159,7 +171,7 @@ public class Tab2 extends Fragment implements View.OnClickListener{
         String[] textDes = {"There might be a car around!",
                         "Beware of DOGS!!!",
                         "Ambience"};
-        String filename = "prob_all_extra.csv";
+        String filename = "M7_prob_db.csv";
         writeToExcel(filename, output);
         /*
         for (int i=0; i<(output.length-1); i++){
@@ -189,10 +201,10 @@ public class Tab2 extends Fragment implements View.OnClickListener{
             }
         }
         */
-        hornValue.setText(String.format("%.2g%n", output[0]));
-        barkValue.setText(String.format("%.2g%n", output[1]));
-//        gunShotValue.setText(String.format("%.2g%n", output[3]));
-//        ambientValue.setText(String.format("%.2g%n", output[2]));
+        hornValue.setText(Double.toString(output[0]));
+        barkValue.setText(Double.toString(output[1]));
+        gunShotValue.setText(Double.toString(output[2]));
+        ambientValue.setText(Double.toString(output[3]));
     }
 
     public void writeToExcel(String filename, double[] output){ //String detail
@@ -214,7 +226,7 @@ public class Tab2 extends Fragment implements View.OnClickListener{
             BufferedWriter out = new BufferedWriter(filewriter);
 //            StringBuilder sb = new StringBuilder(dateString.length());
 //            sb.append(dateString);
-            Log.e(TAG, "Time: " + date.toString());
+//            Log.e(TAG, "Time: " + date.toString());
 
             String data = date.toString() + ",";
             for(int i=0; i<output.length; i++){

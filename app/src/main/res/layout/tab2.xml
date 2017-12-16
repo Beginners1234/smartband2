@@ -178,4 +178,22 @@
         app:layout_constraintLeft_toRightOf="parent">
     </ListView>
 
+    <Button
+        android:id="@+id/startsoundRecord"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Start Record"
+        app:layout_constraintBottom_toTopOf="parent"
+        app:layout_constraintLeft_toRightOf="parent"
+        android:layout_marginTop="14dp" />
+
+    <Button
+        android:id="@+id/stopSoundRecord"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Stop Record"
+        app:layout_constraintBottom_toTopOf="parent"
+        app:layout_constraintRight_toLeftOf="parent"
+        android:layout_marginTop="14dp" />
+
 </android.support.constraint.ConstraintLayout>
