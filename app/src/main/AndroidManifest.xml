@@ -1,6 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     package="in.iitd.assistech.smartband">
+
+    <uses-sdk tools:overrideLibrary="me.aflak.bluetooth_library" />
 
     <uses-permission android:name="android.permission.ASEC_CREATE" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
@@ -9,7 +12,12 @@
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.VIBRATE" />
-
+    <uses-permission android:name="android.permission.BLUETOOTH" />
+    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.STORAGE" />
     <!-- To auto-complete the email text field in the login form with the user's emails -->
     <uses-permission android:name="android.permission.GET_ACCOUNTS" />
     <uses-permission android:name="android.permission.READ_PROFILE" />
@@ -25,9 +33,9 @@
     <application
         android:allowBackup="true"
         android:excludeFromRecents="false"
-        android:largeHeap="true"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
+        android:largeHeap="true"
         android:noHistory="false"
         android:supportsRtl="true"
         android:theme="@style/MainActivityTheme">
@@ -52,27 +60,32 @@
 
             <!-- android:excludeFromRecents="true" -->
             <!-- android:noHistory="true" -->
-            <!--<intent-filter>-->
-                <!--<action android:name="android.intent.action.MAIN" />-->
+            <!-- <intent-filter> -->
+            <!-- <action android:name="android.intent.action.MAIN" /> -->
 
-                <!--<category android:name="android.intent.category.LAUNCHER" />-->
-            <!--</intent-filter>-->
+
+            <!-- <category android:name="android.intent.category.LAUNCHER" /> -->
+            <!-- </intent-filter> -->
         </activity>
-
-        <activity android:name=".Splash"
+        <activity
+            android:name=".Splash"
             android:label="@string/app_name"
             android:screenOrientation="portrait"
-            android:theme="@style/AppTheme" >
+            android:theme="@style/AppTheme">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <!--<activity-->
-            <!--android:name=".SignInActivity"-->
-            <!--android:label="@string/title_activity_sign_in"-->
-            <!--android:theme="@style/MainActivityTheme"></activity>-->
+        <!-- <activity -->
+        <!-- android:name=".SignInActivity" -->
+        <!-- android:label="@string/title_activity_sign_in" -->
+        <!-- android:theme="@style/MainActivityTheme"></activity> -->
+        <activity
+            android:name=".UploadActivity"
+            android:label="@string/title_activity_upload"
+            android:theme="@style/MainActivityTheme"></activity>
     </application>
 
 </manifest>

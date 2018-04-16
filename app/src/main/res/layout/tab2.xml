@@ -6,7 +6,7 @@
     android:orientation="vertical"
     android:background="@drawable/background">
 
-    <RelativeLayout
+    <android.support.constraint.ConstraintLayout
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:id="@+id/play_pause_layout"
@@ -20,18 +20,13 @@
             android:layout_height="200dp"
             android:id="@+id/start_button"
             android:src="@drawable/start_button_small"
-            android:layout_centerInParent="true"
             android:scaleType="centerCrop"
             android:background="@null"
+            app:layout_constraintLeft_toRightOf="parent"
+            app:layout_constraintRight_toLeftOf="parent"
+            app:layout_constraintBottom_toTopOf="parent"
+            app:layout_constraintTop_toBottomOf="parent"
             android:adjustViewBounds="false"/>
-
-        <!--<de.hdodenhof.circleimageview.CircleImageView-->
-            <!--android:layout_width="300dp"-->
-            <!--android:layout_height="300dp"-->
-            <!--android:id="@+id/start_button"-->
-            <!--android:src="@drawable/start_button_small"-->
-            <!--android:background="@null"-->
-            <!--android:layout_centerInParent="true"/>-->
 
         <ImageButton
             android:layout_width="200dp"
@@ -41,17 +36,55 @@
             android:visibility="gone"
             android:scaleType="centerCrop"
             android:background="@null"
+            app:layout_constraintLeft_toRightOf="parent"
+            app:layout_constraintRight_toLeftOf="parent"
+            app:layout_constraintBottom_toTopOf="parent"
+            app:layout_constraintTop_toBottomOf="parent"
             android:adjustViewBounds="true"/>
 
-        <!--<de.hdodenhof.circleimageview.CircleImageView-->
-            <!--android:layout_width="300dp"-->
-            <!--android:layout_height="300dp"-->
-            <!--android:id="@+id/stop_button"-->
-            <!--android:src="@drawable/stop_button_small"-->
-            <!--android:background="@null"-->
-            <!--android:layout_centerInParent="true"/>-->
+    </android.support.constraint.ConstraintLayout>
+    <android.support.constraint.ConstraintLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:layout_constraintLeft_toRightOf="parent"
+        app:layout_constraintRight_toLeftOf="parent"
+        app:layout_constraintBottom_toTopOf="parent">
 
-    </RelativeLayout>
+        <Button
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Turn On"
+            android:id="@+id/bleOnButton"
+            android:clickable="true"
+            app:layout_constraintLeft_toRightOf="parent"/>
+
+
+        <Button
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Send"
+            android:id="@+id/bleSendButton"
+            app:layout_constraintLeft_toRightOf="@+id/bleOnButton"/>
+
+        <Button
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="turn off"
+            android:id="@+id/bleOffButton"
+            android:layout_alignParentLeft="true"
+            android:layout_alignParentStart="true"
+            app:layout_constraintLeft_toRightOf="@+id/bleSendButton"/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Label"
+            android:id="@+id/myLabel"
+            android:textColor="#ff34ff06"
+            android:textSize="25dp"
+            app:layout_constraintLeft_toRightOf="@+id/bleOffButton"/>
+
+    </android.support.constraint.ConstraintLayout>
 
     <RelativeLayout
         android:layout_width="wrap_content"
@@ -149,40 +182,33 @@
 
     </RelativeLayout>
 
-
     <Button
-        android:id="@+id/micReadButton"
+        android:id="@+id/startFPButton"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Read Mic"
         android:layout_marginTop="14dp"
+        android:visibility="gone"
         app:layout_constraintLeft_toLeftOf="parent"
         app:layout_constraintTop_toBottomOf="parent" />
 
     <Button
-        android:id="@+id/stopRecordButton"
+        android:id="@+id/stopFPButton"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Stop Record"
+        android:visibility="gone"
         app:layout_constraintRight_toLeftOf="parent"
         app:layout_constraintTop_toBottomOf="parent"
         android:layout_marginTop="14dp" />
 
-    <ListView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:id="@+id/historyListView"
-        android:layout_marginTop="50dp"
-        app:layout_constraintTop_toBottomOf="@+id/play_pause_layout"
-        app:layout_constraintRight_toLeftOf="parent"
-        app:layout_constraintLeft_toRightOf="parent">
-    </ListView>
 
     <Button
         android:id="@+id/startsoundRecord"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Start Record"
+        android:visibility="gone"
         app:layout_constraintBottom_toTopOf="parent"
         app:layout_constraintLeft_toRightOf="parent"
         android:layout_marginTop="14dp" />
@@ -192,8 +218,10 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Stop Record"
+        android:visibility="gone"
         app:layout_constraintBottom_toTopOf="parent"
         app:layout_constraintRight_toLeftOf="parent"
         android:layout_marginTop="14dp" />
+
 
 </android.support.constraint.ConstraintLayout>

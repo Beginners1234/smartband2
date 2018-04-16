@@ -1,11 +1,17 @@
 package in.iitd.assistech.smartband;
 
 import android.app.NotificationManager;
+import android.bluetooth.BluetoothAdapter;
+import android.bluetooth.BluetoothDevice;
+import android.bluetooth.BluetoothSocket;
 import android.content.Context;
+import android.content.Intent;
 import android.graphics.Point;
 import android.location.Location;
 import android.os.Bundle;
 import android.os.Environment;
+import android.os.Handler;
+import android.os.Message;
 import android.os.Vibrator;
 import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
@@ -16,22 +22,31 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.ImageButton;
+import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.FileWriter;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.text.DateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.GregorianCalendar;
 import java.util.List;
+import java.util.Set;
 import java.util.SimpleTimeZone;
+import java.util.UUID;
 
 import de.hdodenhof.circleimageview.CircleImageView;
 
@@ -48,15 +63,28 @@ public class Tab2 extends Fragment implements View.OnClickListener{
     private TextView barkValue;
     private TextView gunShotValue;
     private TextView ambientValue;
-    private Button micReadButton;
-    private Button stopRecordButton;
+    private Button startFPButton;
+    private Button stopFPButton;
     private Button soundRecordButton;
     private Button stopSoundRecord;
     private ImageButton startButton;
     private ImageButton stopButton;
-//    private ListView historyListView;
-//    private List<String> histListItems;
-//    private HistoryNotifAdapter historyNotifAdapter;
+    private ListView historyListView;
+    private Button bleOnButton;
+    private Button bleSendButton;
+    private Button bleOffButton;
+    TextView myLabel;
+
+    // MAC address of remote Bluetooth device
+    // Replace this with the address of your own module
+    private final String address = "00:06:66:66:33:89";
+
+    // The thread that does all the work
+    BluetoothThread btt;
+
+    // Handler for writing messages to the Bluetooth connection
+    Handler writeHandler;
+
 
     private OnTabEvent mListener;
 
@@ -77,16 +105,20 @@ public class Tab2 extends Fragment implements View.OnClickListener{
         barkValue = (TextView)view.findViewById(R.id.barkValue);
         gunShotValue = (TextView)view.findViewById(R.id.gunShotValue);
         ambientValue = (TextView)view.findViewById(R.id.ambientValue);
-        micReadButton = (Button)view.findViewById(R.id.micReadButton);
-        stopRecordButton = (Button)view.findViewById(R.id.stopRecordButton);
+        startFPButton = (Button)view.findViewById(R.id.startFPButton);
+        stopFPButton = (Button)view.findViewById(R.id.stopFPButton);
         soundRecordButton = (Button)view.findViewById(R.id.startsoundRecord);
         stopSoundRecord = (Button)view.findViewById(R.id.stopSoundRecord);
-
         Display display = getActivity().getWindowManager().getDefaultDisplay();
         Point screenSize = new Point();
         display.getRealSize(screenSize);
         int size = Math.min(screenSize.x, screenSize.y);
         int buttonSize = Math.round(size * 0.75f);
+
+        bleSendButton = (Button) view.findViewById(R.id.bleSendButton);
+        bleOnButton = (Button) view.findViewById(R.id.bleOnButton);
+        bleOffButton = (Button) view.findViewById(R.id.bleOffButton);
+        myLabel = (TextView) view.findViewById(R.id.myLabel);
 
         startButton = (ImageButton) view.findViewById(R.id.start_button);
         stopButton = (ImageButton) view.findViewById(R.id.stop_button);
@@ -97,23 +129,15 @@ public class Tab2 extends Fragment implements View.OnClickListener{
         stopButton.setMaxWidth(buttonSize);
         stopButton.setMaxHeight(buttonSize);
 
-        micReadButton.setOnClickListener(this);
+        startFPButton.setOnClickListener(this);
         startButton.setOnClickListener(this);
-        stopRecordButton.setOnClickListener(this);
+        stopFPButton.setOnClickListener(this);
         stopButton.setOnClickListener(this);
         soundRecordButton.setOnClickListener(this);
         stopSoundRecord.setOnClickListener(this);
-//        historyListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-//            @Override
-//            public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
-//                historyNotifAdapter.notifyDataSetChanged();
-//            }
-//        });
-
-//        histListItems = new ArrayList<String>();
-//        historyNotifAdapter = new HistoryNotifAdapter(getActivity(), histListItems);
-//        historyListView.setAdapter(historyNotifAdapter);
-
+        bleOffButton.setOnClickListener(this);
+        bleOnButton.setOnClickListener(this);
+        bleSendButton.setOnClickListener(this);
 
         return view;
     }
@@ -121,13 +145,17 @@ public class Tab2 extends Fragment implements View.OnClickListener{
     @Override
     public void onClick(View view) {
         switch(view.getId()){
-            case R.id.micReadButton:
+            case R.id.startFPButton:
                 //TODO
-                mListener.onButtonClick("MicReadButton");
+                mListener.onButtonClick("StartTargetFingerPrint");
+                stopFPButton.setVisibility(View.VISIBLE);
+                startFPButton.setVisibility(View.GONE);
                 break;
-            case R.id.stopRecordButton:
+            case R.id.stopFPButton:
                 //TODO
-                mListener.onButtonClick("StopRecordButton");
+                mListener.onButtonClick("StopTargetFingerPrint");
+                stopFPButton.setVisibility(View.GONE);
+                startFPButton.setVisibility(View.VISIBLE);
                 break;
 
             case R.id.start_button:
@@ -149,6 +177,17 @@ public class Tab2 extends Fragment implements View.OnClickListener{
             case R.id.stopSoundRecord:
                 mListener.onButtonClick("StopRecord");
                 break;
+            case R.id.bleOnButton:
+                connectButtonPressed();
+                mListener.onButtonClick("TurnBluetoothOn");
+                break;
+            case R.id.bleSendButton:
+                mListener.onButtonClick("SendBluetoothData");
+                break;
+            case R.id.bleOffButton:
+                disconnectButtonPressed();
+                mListener.onButtonClick("TurnBluetoothOff");
+                break;
         }
     }
 
@@ -162,50 +201,84 @@ public class Tab2 extends Fragment implements View.OnClickListener{
         }
     }
 
-    public void editValue(double[] output, boolean[] notifState){
-//        double[] output = new double[3];
-//        output[0] = prob[0];//hornProb;
-//        output[1] = prob[1];//barkProb;
-//        output[2] = prob[2];//ambientProb;
-        String[] textOut = {"Horn Detected", "DogBark Detected", "Ambience"};
-        String[] textDes = {"There might be a car around!",
-                        "Beware of DOGS!!!",
-                        "Ambience"};
-        String filename = "M7_prob_db.csv";
-        writeToExcel(filename, output);
-        /*
-        for (int i=0; i<(output.length-1); i++){
-            if(output[i]>0.85){
-//                histListItems.add(textOut[i]);
-//                historyNotifAdapter.notifyDataSetChanged();
-                NotificationCompat.Builder mBuilder =
-                        new NotificationCompat.Builder(getActivity())
-                                .setSmallIcon(R.drawable.notif_icon)
-                                .setContentTitle(textOut[i])
-                                .setContentText(textDes[i]);
 
-                int mNotificationId = 001;
-                // Gets an instance of the NotificationManager service
-                if(getContext().getSystemService(NOTIFICATION_SERVICE) != null) {
-                    NotificationManager mNotifyMgr =
-                            (NotificationManager) getContext().getSystemService(NOTIFICATION_SERVICE);
-                    mNotifyMgr.notify(mNotificationId, mBuilder.build());
-                }
-                // Builds the notification and issues it.
-                //Vibrate
-                if(notifState[0]){
-                    Vibrator v = (Vibrator) getContext().getSystemService(Context.VIBRATOR_SERVICE);
-                    // Vibrate for 500 milliseconds
-//                    v.vibrate(500);
-                }
-            }
-        }
-        */
+    public void editValue(double[] output, boolean[] notifState){
+        String filename = "M12_bhavya_phone.csv";
+        writeToExcel(filename, output);
         hornValue.setText(Double.toString(output[0]));
         barkValue.setText(Double.toString(output[1]));
-        gunShotValue.setText(Double.toString(output[2]));
-        ambientValue.setText(Double.toString(output[3]));
+//        gunShotValue.setText(Double.toString(output[]));
+        ambientValue.setText(Double.toString(output[2]));
     }
+
+    /**
+     * Launch the Bluetooth thread.
+     */
+    public void connectButtonPressed() {
+        Log.v(TAG, "Connect button pressed.");
+
+        // Only one thread at a time
+        if (btt != null) {
+            Log.w(TAG, "Already connected!");
+            return;
+        }
+
+        // Initialize the Bluetooth thread, passing in a MAC address
+        // and a Handler that will receive incoming messages
+        btt = new BluetoothThread(address, new Handler() {
+
+            @Override
+            public void handleMessage(Message message) {
+
+                String s = (String) message.obj;
+
+                // Do something with the message
+                if (s.equals("CONNECTED")) {
+                    myLabel.setText("Connected.");
+                } else if (s.equals("DISCONNECTED")) {
+                    myLabel.setText("Disconnected.");
+                } else if (s.equals("CONNECTION FAILED")) {
+                    myLabel.setText("Connection failed!");
+                    btt = null;
+                } else {
+                    myLabel.setText(s);
+                }
+            }
+        });
+
+        // Get the handler that is used to send messages
+        writeHandler = btt.getWriteHandler();
+
+        // Run the thread
+        btt.start();
+        myLabel.setText("Connecting...");
+    }
+
+    /**
+     * Kill the Bluetooth thread.
+     */
+    public void disconnectButtonPressed() {
+        Log.v(TAG, "Disconnect button pressed.");
+
+        if(btt != null) {
+            btt.interrupt();
+            btt = null;
+        }
+    }
+
+    /**
+     * Send a message using the Bluetooth thread's write handler.
+     */
+    public void writeButtonPressed(View v) {
+        Log.v(TAG, "Write button pressed.");
+
+        String data = myLabel.getText().toString();
+
+        Message msg = Message.obtain();
+        msg.obj = data;
+        writeHandler.sendMessage(msg);
+    }
+
 
     public void writeToExcel(String filename, double[] output){ //String detail
         File external = Environment.getExternalStorageDirectory();
@@ -229,6 +302,7 @@ public class Tab2 extends Fragment implements View.OnClickListener{
 //            Log.e(TAG, "Time: " + date.toString());
 
             String data = date.toString() + ",";
+//            data += "bark, ";
             for(int i=0; i<output.length; i++){
                 data += output[i] + ",";
             }
@@ -244,4 +318,6 @@ public class Tab2 extends Fragment implements View.OnClickListener{
             Log.e(TAG, e.toString() + " FileOutputStream");
         }
     }
+
+
 }

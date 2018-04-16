@@ -2,8 +2,11 @@ package in.iitd.assistech.smartband;
 
 import android.Manifest;
 import android.app.NotificationManager;
+import android.bluetooth.BluetoothAdapter;
+import android.bluetooth.BluetoothDevice;
 import android.content.Context;
 import android.content.DialogInterface;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.content.res.AssetManager;
@@ -26,39 +29,33 @@ import android.support.v4.view.ViewPager;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.text.InputType;
 import android.util.Log;
-import android.view.ViewGroup;
+import android.view.View;
 import android.view.Window;
-import android.view.WindowManager;
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
+import android.widget.EditText;
 import android.widget.ImageView;
-import android.widget.ListAdapter;
-import android.widget.ListView;
 import android.widget.Toast;
 
 import com.sounds.ClassifySound;
 
-
-import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
-import java.io.FileWriter;
 import java.io.IOException;
-import java.io.InputStream;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Date;
 import java.util.List;
+import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
 
-import jxl.Cell;
-import jxl.Sheet;
-import jxl.Workbook;
 
-import static com.sounds.ClassifySound.PROCESS_LENGTH;
 import static com.sounds.ClassifySound.numOutput;
+import static in.iitd.assistech.smartband.HelperFunctions.getClassifyProb;
+import static in.iitd.assistech.smartband.HelperFunctions.getDecibel;
 import static in.iitd.assistech.smartband.Tab3.notificationListItems;
 import static in.iitd.assistech.smartband.Tab3.soundListItems;
 
@@ -85,7 +82,7 @@ public class MainActivity extends AppCompatActivity implements TabLayout.OnTabSe
     /***Variables for audiorecord*/
     private MediaRecorder mRecorder = null;
     private static int REQUEST_MICROPHONE = 101;
-    public static final int RECORD_TIME_DURATION = 1000; //0.5 seconds
+    public static final int RECORD_TIME_DURATION = 300; //0.5 seconds
     private static final int RECORDER_SAMPLERATE = ClassifySound.RECORDER_SAMPLERATE;
     private static final int RECORDER_CHANNELS = AudioFormat.CHANNEL_IN_MONO;
     private static final int RECORDER_AUDIO_ENCODING = AudioFormat.ENCODING_PCM_16BIT;
@@ -99,18 +96,14 @@ public class MainActivity extends AppCompatActivity implements TabLayout.OnTabSe
     private static final String AUDIO_RECORDER_FILE_EXT_WAV = ".wav";
     private static final String AUDIO_RECORDER_FOLDER = "SmartBand";
     private static final String AUDIO_RECORDER_TEMP_FILE = "record_temp.raw";
-    short[] audioData;
 
     private AudioRecord recorder = null;
     private int bufferSize = 0;
     private Thread recordingThread = null;
     private boolean isRecording = false;
-//    Complex[] fftTempArray;
-//    Complex[] fftArray;
-    int[] bufferData;
-    int bytesRecorded;
-    int BytesPerElement;
-    public short[] sData = new short[BufferElements2Rec];
+    private int num_history = 2;
+    int hist_count = 0;
+    private double[][] history_prob = new double[num_history][numOutput];
 
     private static boolean[] startNotifListState;
     private static boolean[] startSoundListState;
@@ -136,14 +129,12 @@ public class MainActivity extends AppCompatActivity implements TabLayout.OnTabSe
         Message message = uiHandler.obtainMessage();
         message.obj = outProb;
         message.sendToTarget();
-//        for(int i=0; i<(outProb.length-2); i++){
-//            if(outProb[i]> 0.60){
-//                showDialog(MainActivity.this, i, outProb);
-////                Message message = uiHandler.obtainMessage();
-////                message.obj = outProb;
-////                message.sendToTarget();
-//            }
-//        }
+        Log.e(TAG, "Prob Ambient = " + Double.toString(outProb[2]));
+        if((1.0-outProb[2])>0.6){
+            int idx = 1;
+            if(outProb[1]<outProb[0]) idx = 0;
+            showDialog(MainActivity.this, idx, outProb);
+        }
     }
 
 
@@ -274,9 +265,9 @@ public class MainActivity extends AppCompatActivity implements TabLayout.OnTabSe
 
         viewPager.setCurrentItem(1);
 
-        int permission = ActivityCompat.checkSelfPermission(MainActivity.this, Manifest.permission.WRITE_EXTERNAL_STORAGE);
+        int writeExtPermission = ActivityCompat.checkSelfPermission(MainActivity.this, Manifest.permission.WRITE_EXTERNAL_STORAGE);
 
-        if (permission != PackageManager.PERMISSION_GRANTED) {
+        if (writeExtPermission != PackageManager.PERMISSION_GRANTED) {
             // We don't have permission so prompt the user
             ActivityCompat.requestPermissions(
                     MainActivity.this,
@@ -288,103 +279,72 @@ public class MainActivity extends AppCompatActivity implements TabLayout.OnTabSe
         bufferSize = AudioRecord.getMinBufferSize
                 (RECORDER_SAMPLERATE,RECORDER_CHANNELS,RECORDER_AUDIO_ENCODING)*3;
 
-        audioData = new short [bufferSize]; //short array that pcm data is put into.
+        //TODO: @Link https://github.com/OmarAflak/Bluetooth-Library
+
     }
 
     @Override
     public void onButtonClick(String text) {
-        if(text == "MicReadButton"){
-            startRecording(1);
-//            try{
-//
-//                processMicSound();
-//            }catch (InterruptedException e){
-//                Log.e(TAG, "onButtonClick() " + e.toString());
-//            }
-        }else if(text == "StopRecordButton"){
-            stopRecording();
-        } else if(text == "SoundRecord"){
-            Log.e(TAG, "Record}");
-            startRecording(2);
-        } else if(text == "StopRecord"){
-            stopRecording();
+        Thread t;
+        switch(text){
+            case "MicReadButton":
+                t = new Thread(){
+                    public void run(){
+                        startRecording(1);
+                    }
+                };
+                t.start();
+                break;
+            case "StopRecordButton":
+                t = new Thread(){
+                    public void run(){
+                        stopRecording();
+                    }
+                };
+                t.start();
+                break;
+            case "SoundRecordButton":
+//                Log.e(TAG, "Record}");
+//                startRecording(2);
+                break;
+            case "StopRecord":
+//                stopRecording();
+//                copyWaveFile(getTempFilename(),getFilename());
+//                deleteTempFile();
+                break;
+            case "StartTargetFingerPrint":
+                //TODO
+                startRecording(2);
+                break;
+            case "StopTargetFingerPrint":
+                //TODO
+                t = new Thread(){
+                    public void run(){
+                        stopRecording();
+                        copyWaveFile(getTempFilename(),getFilename());
+                        deleteTempFile();
+                    }
+                };
+                t.start();
+                break;
+            case "TurnBluetoothOn":
+                Log.e(TAG, "Try to connect");
+//                connectButtonPressed();
+                break;
+            case "SendBluetoothData":
+
+                break;
+            case "TurnBluetoothOff":
+//                disconnectButtonPressed();
+                break;
         }
+
     }
 
     /**--------------Sign In-------------------**/
 
     /**----------------------------------------**/
     /**----------For Sound Processing and stuff----------**/
-    //Load the weights and bias in the form of matrix from sheet in Assets Folder
-
-/*
-    public void processMicSound() throws InterruptedException{
-//        for(int i=0; i<sData.length; i++){
-//            sData[i] = (short)0;
-//        }
-//        for(int i=0; i<history_prob.length; i++){
-//            for(int j=0; j<history_prob[0].length; j++){
-//                history_prob[i][j] = 0.0;
-//            }
-//        }
-        //@link https://stackoverflow.com/questions/40459490/processing-in-audiorecord-thread
-        HandlerThread myHandlerThread = new HandlerThread("my-handler-thread");
-        myHandlerThread.start();
-
-        //make below gloabl and remove final
-        final Handler myHandler = new Handler(myHandlerThread.getLooper(), new Handler.Callback() {
-            @Override
-            public boolean handleMessage(Message msg) {
-//                someHeavyProcessing((short[]) msg.obj, msg.arg1);
-                try{
-                    Log.e(TAG, "handleMessage");
-                    long start_time = System.nanoTime();
-
-                    //Calculate probability using ClassifySound.
-                    short[] temp_sound = (short[]) msg.obj;
-                    short[] temp1 = Arrays.copyOfRange(temp_sound, 0, PROCESS_LENGTH);
-                    double[] temp_prob = ClassifySound.getProb(temp1);
-                    Log.e(TAG + " temp_prob", Double.toString(temp_prob[0]) + ", " + Double.toString(temp_prob[1]));
-//                            + ", " + Double.toString(temp_prob[2])+ ", " + Double.toString(temp_prob[3]));
-
-                    setProbOut(temp_prob);
-                }catch (Exception e){
-                    System.out.print(TAG + " myHandler : " + e.toString());
-                }
-                return true;
-            }
-        });
-
-        if(!isRecording){
-            int BytesPerElement = 2; // 2 bytes in 16bit format
-            if (bufferSize != AudioRecord.ERROR_BAD_VALUE && bufferSize > 0){
-                recorder = new AudioRecord(MediaRecorder.AudioSource.MIC,
-                        RECORDER_SAMPLERATE, RECORDER_CHANNELS,
-                        RECORDER_AUDIO_ENCODING,BufferElements2Rec*BytesPerElement);//
-                recorder.startRecording();
-            }
-
-//            isRecording = true;
-            recordingThread = new Thread(new Runnable() {
-                public void run() {
-                    while (isRecording) {
-                        synchronized (this){
-                            int num_read = recorder.read(sData, 0, BufferElements2Rec);
-                            Message message = myHandler.obtainMessage();
-                            message.obj = sData;
-                            message.arg1 = num_read;
-                            message.sendToTarget();
-                        }
-                    }
-                }
-            }, "AudioRecorder Thread");
-            recordingThread.start();
-
-        } else{
-            Toast.makeText(this, "Recording started", Toast.LENGTH_SHORT).show();
-        }
-    }
-    */
 
     private void startRecording(int indicator) {
         int bufferSizeinBytes = 0;
@@ -434,33 +394,34 @@ public class MainActivity extends AppCompatActivity implements TabLayout.OnTabSe
         HandlerThread myHandlerThread = new HandlerThread("my-handler-thread");
         myHandlerThread.start();
 
-        //make below gloabl and remove final
         final Handler myHandler = new Handler(myHandlerThread.getLooper(), new Handler.Callback() {
             @Override
             public boolean handleMessage(Message msg) {
-//                someHeavyProcessing((short[]) msg.obj, msg.arg1);
-                try{
-                    Log.e(TAG, "handleMessage");
-                    long start_time = System.nanoTime();
-                    short[] temp_sound = (short[]) msg.obj;
-//                    short[] temp1 = Arrays.copyOfRange(temp_sound, 0, PROCESS_LENGTH);
-//                    writeToExcel("sound_file.csv", temp_sound);
-                    double threshold = 40;
-                    double decibel = getDecibel(temp_sound);
-                    Log.e(TAG, "Decibel : " + decibel);
-                    double[] temp_prob;
-                    if(decibel > threshold){
-                        temp_prob = new double[numOutput];
-                        for(int i=0; i<temp_prob.length; i++){
-                            temp_prob[i] = Double.NaN;
+                Log.e(TAG, "handleMessage");
+                short[] temp_sound = (short[]) msg.obj;
+                double[] classifyProb = getClassifyProb(temp_sound);
+                for(int i=0; i<classifyProb.length; i++){
+                    history_prob[hist_count][i] = classifyProb[i];
+                }
+                hist_count++;
+                int numNan=0;
+                if(hist_count==num_history){
+                    hist_count = 0;
+                    double[] mean_classifyProb = new double[classifyProb.length];
+                    for(int i=0; i<classifyProb.length; i++){
+                        int num_NotNan = 0;
+                        double sum=0;
+                        for(int j=0; j<history_prob.length; j++){
+                            if(history_prob[j][i] != Double.NaN){
+                                sum += history_prob[j][i];
+                                num_NotNan++;
+                            }
                         }
-                    } else{
-                        temp_prob = ClassifySound.getProb(temp_sound);
+                        mean_classifyProb[i] = sum/num_NotNan;
+                        numNan = num_history - num_NotNan;
                     }
-//                    Log.e(TAG, Integer.toString(temp_prob.length) );
-                    setProbOut(temp_prob);
-                }catch (Exception e){
-                    System.out.print(TAG + " myHandler : " + e.toString());
+                    Log.e(TAG, "Num Nan : " + numNan);
+                    if(numNan < num_history/2) setProbOut(mean_classifyProb);
                 }
                 return true;
             }
@@ -528,9 +489,6 @@ public class MainActivity extends AppCompatActivity implements TabLayout.OnTabSe
             recorder = null;
             recordingThread = null;
         }
-
-        copyWaveFile(getTempFilename(),getFilename());
-        deleteTempFile();
     }
 
     private void deleteTempFile() {
@@ -538,14 +496,13 @@ public class MainActivity extends AppCompatActivity implements TabLayout.OnTabSe
         file.delete();
     }
 
-    private String getFilename(){
+    private synchronized String getFilename(){
         String filepath = Environment.getExternalStorageDirectory().getPath();
         File file = new File(filepath,AUDIO_RECORDER_FOLDER);
 
         if (!file.exists()) {
             file.mkdirs();
         }
-
         return (file.getAbsolutePath() + "/" + System.currentTimeMillis() +
                 AUDIO_RECORDER_FILE_EXT_WAV);
     }
@@ -658,6 +615,7 @@ public class MainActivity extends AppCompatActivity implements TabLayout.OnTabSe
 
     /**---------------------------------------**/
 
+    /**---------------------------------------**/
     public void showDialog(Context context, int idx, double[] outProb) {
         if (myDialog != null && myDialog.isShowing()) return;
 
@@ -700,24 +658,6 @@ public class MainActivity extends AppCompatActivity implements TabLayout.OnTabSe
         }, 15000); // the timer will count 5 seconds....
     }
 
-    public double getDecibel(short[] sound){
-        double decibel;
-        long sum = 0;
-        double avg;
-        for(int i=0; i<sound.length; i++){
-//            Log.e(TAG, Integer.toString(Math.abs(sound[i])));
-            sum += Math.abs(sound[i]);
-//            Log.e(TAG, Long.toString(sum));
-
-        }
-        avg= sum*1.0/sound.length;
-        Log.e(TAG, "Avg. : " + avg);
-        Log.e(TAG, "Sum. : " + sum);
-        if(avg == 0) decibel=Double.NEGATIVE_INFINITY;
-        else decibel = 20.0*Math.log10(32769.0/avg);
-        return decibel;
-    }
-
     /**-----------For Tab Layout--------------**/
     @Override
     public void onTabSelected(TabLayout.Tab tab) {
@@ -740,4 +680,5 @@ public class MainActivity extends AppCompatActivity implements TabLayout.OnTabSe
     static boolean[] getStartSoundListState(){
         return startSoundListState;
     }
+
 }

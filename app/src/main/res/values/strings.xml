@@ -32,4 +32,6 @@
     <string name="title_activity_notification">NotificationActivity</string>
     <string name="title_activity_sign_in">SignInActivity</string>
 
+    <string name="btnUploadToServer">Upload to Server</string>
+    <string name="title_activity_upload">UploadActivity</string>
 </resources>
